@@ -12,20 +12,53 @@
 ### 現在のディレクトリ構造
 ```
 wedinq/
-├ app/                    # App Routerのルーティング
-│   ├ layout.tsx         # ルートレイアウト
-│   ├ page.tsx           # トップページ
-│   └ globals.css        # グローバルスタイル
-├ public/                # 静的アセット
-└ package.json
+├ src/
+│   ├ app/                    # App Router（Server/Client Components）
+│   ├ components/
+│   │   ├ UI/
+│   │   ├ Models/
+│   │   ├ Pages/
+│   │   ├ Layouts/
+│   │   └ Functional/
+│   ├ features/
+│   ├ server/
+│   │   ├ actions/
+│   │   ├ repositories/
+│   │   └ adapters/
+│   ├ lib/
+│   │   ├ firebase/
+│   │   └ validators/
+│   └ utils/
+├ firebase/
+│   ├ indexes/
+│   └ rules/
+├ tests/
+│   ├ integration/
+│   └ unit/
+├ public/
+├ .firebaserc
+├ firebase.json
+├ package.json
+└ pnpm-lock.yaml
 ```
 
 ### 開発コマンド
-- `pnpm dev`: 開発サーバー起動
+- `pnpm dev`: Next.js 開発サーバー
+- `pnpm dev:emulator`: Next.js + Firebase Emulator Suiteを並列起動
+- `pnpm firebase:emulator`: Emulator Suite単体起動（Firestore/Auth/Storage）
 - `pnpm build`: プロダクションビルド
 - `pnpm lint`: Biomeによるコード検証
-- `pnpm format`: Biomeによるコード整形
+- `pnpm format` / `pnpm format:check`: Biome整形
 - `pnpm typecheck`: TypeScript型チェック
+- `pnpm test`: ひとまずプレースホルダー（将来のVitest等を想定）
+- `pnpm test:emulator`: Firestore/Authエミュレータでのテスト実行ラッパー
+
+### Firebaseセットアップメモ
+- `.firebaserc` の `wedinq-local` をローカル専用プロジェクトとして扱い、実プロジェクトIDは環境ごとに差し替える。
+- `firebase.json` で Firestore/Auth/Storage のルールとエミュレータポートを定義済み。必要に応じて Functions や Hosting を追記する。
+- ルールとインデックスは `firebase/rules/*.rules`, `firebase/indexes/firestore.indexes.json` に集約し、PRで差分をレビュー可能にする。
+- `pnpm firebase:emulator` 実行前に `pnpm dlx firebase-tools login`（初回のみ）が必要。
+- `src/lib/firebase/{client,admin}.ts` はこれから作成し、`NEXT_PUBLIC_FIREBASE_*`/サービスアカウントの読み出しを一元化する。
 
 ---
 
@@ -44,33 +77,41 @@ wedinq/
 - **API/Middleware**: `/api/*`は外部Webhookや長時間処理専用。`middleware.ts`でFirebaseトークン検証やA/B判定を行い、Server Componentsへユーザー情報を渡す。
 - **バックグラウンド**: 非同期バッチはFirebase Functionsへ寄せ、Firestore変更時は`/api/revalidate`や`revalidateTag`を叩いてNext.jsキャッシュと同期。
 
-### 計画中のディレクトリ骨格
+### 計画中のディレクトリ骨格（現行ベース）
 ```
 repo/
-├ firebase/                     # TODO: Firebase統合時に追加
+├ firebase/
 │   ├ indexes/
+│   │   └ firestore.indexes.json
 │   └ rules/
-├ src/                          # TODO: app/からsrc/app/へ移行
-│   ├ app/                      # ルーティング・Server/Client Component
-│   ├ components/               # 5分類（UI/Models/Pages/Layouts/Functional）
+│       ├ firestore.rules
+│       └ storage.rules
+├ src/
+│   ├ app/
+│   ├ components/
+│   │   ├ UI/
+│   │   ├ Models/
+│   │   ├ Pages/
+│   │   ├ Layouts/
+│   │   └ Functional/
 │   ├ features/
 │   │   └ <domain>/
-│   │       ├ application/      # Server Action・ユースケース
-│   │       ├ domain/           # 型・エンティティ
-│   │       └ infrastructure/   # Repository実装（Firestore/Storage）
+│   │       ├ application/
+│   │       ├ domain/
+│   │       └ infrastructure/
 │   ├ server/
 │   │   ├ actions/
 │   │   ├ repositories/
 │   │   └ adapters/
 │   ├ lib/
-│   │   ├ firebase/             # TODO: Firebase統合時に追加
-│   │   │   ├ admin.ts          # Admin SDK初期化
-│   │   │   └ client.ts         # Client SDK初期化
+│   │   ├ firebase/
+│   │   │   ├ admin.ts          # Admin SDK初期化予定
+│   │   │   └ client.ts         # Client SDK初期化予定
 │   │   ├ config.ts
 │   │   └ validators/
 │   ├ middleware.ts
 │   └ utils/
-└ tests/                        # TODO: テスト環境構築時に追加
+└ tests/
     ├ integration/
     └ unit/
 ```

@@ -4,20 +4,28 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:emulator": "concurrently -k -n web,emulator \"pnpm dev\" \"pnpm firebase:emulator\"",
+    "firebase:emulator": "firebase emulators:start --project wedinq-local --only firestore,functions,auth,storage",
     "build": "next build",
     "start": "next start",
     "lint": "biome check .",
     "format": "biome format --write .",
     "format:check": "biome format .",
     "biome:ci": "biome ci .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"No tests specified\"",
+    "test:emulator": "firebase emulators:exec --project wedinq-local --only firestore,auth \"pnpm test\""
   },
   "dependencies": {
+    "firebase": "^11.0.1",
+    "firebase-admin": "^12.5.0",
     "next": "16.0.3",
     "react": "19.2.0",
     "react-dom": "19.2.0"
   },
   "devDependencies": {
+    "concurrently": "^9.0.1",
+    "firebase-tools": "^13.27.0",
     "@biomejs/biome": "^2.3.5",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
