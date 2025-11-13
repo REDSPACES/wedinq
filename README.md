@@ -5,7 +5,7 @@ Next.js 16 (App Router) + React 19 + TypeScript 5 をベースに、Firebase Emu
 ## セットアップ
 1. Node.js 20 以上と pnpm 8+ を用意する。
 2. 依存関係を取得: `pnpm install`
-3. Firebase CLI をログイン: `pnpm dlx firebase-tools login`（初回のみ）
+3. Firebase CLI にログイン: `pnpm dlx firebase-tools login`（初回のみ）
 4. Server Components で利用する環境変数は `.env.local` に定義する。
 
 ## 主なスクリプト
