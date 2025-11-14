@@ -1,9 +1,20 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    match /{allPaths=**} {
+    // ユーザーごとのプライベートファイル
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // 公開ファイル（誰でも読める、認証済みユーザーが書ける）
+    match /public/{allPaths=**} {
       allow read: if true;
       allow write: if request.auth != null;
+    }
+
+    // デフォルトは拒否
+    match /{allPaths=**} {
+      allow read, write: if false;
     }
   }
 }
