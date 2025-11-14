@@ -7,7 +7,8 @@ import { quizSlides } from "../slides";
 const ScreenSlidesPage = () => {
   const slides = useMemo(() => [...quizSlides], []);
   const [index, setIndex] = useState(0);
-  useSlideBroadcast(index);
+  const currentSlide = slides[index] ?? slides[0];
+  useSlideBroadcast(index, currentSlide.phase);
 
   const goPrev = useCallback(() => setIndex((prev) => Math.max(prev - 1, 0)), []);
   const goNext = useCallback(() => setIndex((prev) => Math.min(prev + 1, slides.length - 1)), [slides.length]);
@@ -27,7 +28,7 @@ const ScreenSlidesPage = () => {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center bg-[#fddfe2] px-6 py-10">
       <div className="w-full max-w-6xl flex-1">
-        <div className="aspect-video w-full rounded-[48px] bg-white shadow-2xl">{slides[index].component}</div>
+        <div className="aspect-video w-full rounded-[48px] bg-white shadow-2xl">{currentSlide.component}</div>
       </div>
       <div className="mt-6 flex w-full max-w-4xl items-center justify-between gap-4 text-amber-900">
         <button
@@ -38,7 +39,7 @@ const ScreenSlidesPage = () => {
         >
           ← Back
         </button>
-        <div className="text-center text-lg font-semibold">{slides[index].label}</div>
+        <div className="text-center text-lg font-semibold">{currentSlide.label}</div>
         <button
           type="button"
           onClick={goNext}

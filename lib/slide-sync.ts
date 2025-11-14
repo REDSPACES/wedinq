@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import type { SlidePhase, SlideSyncState } from "@/types/slides";
 
 const CHANNEL_NAME = "wedinq-quiz-slide";
 
 type SlideMessage = {
   type: "sync";
-  index: number;
+  payload: SlideSyncState;
 };
 
 const createChannel = (): BroadcastChannel | null => {
@@ -14,22 +15,22 @@ const createChannel = (): BroadcastChannel | null => {
   return new BroadcastChannel(CHANNEL_NAME);
 };
 
-export const useSlideBroadcast = (index: number) => {
+export const useSlideBroadcast = (index: number, phase: SlidePhase) => {
   useEffect(() => {
     const channel = createChannel();
     if (!channel) {
       return undefined;
     }
-    const message: SlideMessage = { type: "sync", index };
+    const message: SlideMessage = { type: "sync", payload: { index, phase } };
     channel.postMessage(message);
     return () => {
       channel.close();
     };
-  }, [index]);
+  }, [index, phase]);
 };
 
-export const useSlideSubscription = (initialIndex = 0) => {
-  const [currentIndex, setCurrentIndex] = useState(initialIndex);
+export const useSlideSubscription = (initialState: SlideSyncState) => {
+  const [state, setState] = useState(initialState);
 
   useEffect(() => {
     const channel = createChannel();
@@ -38,8 +39,8 @@ export const useSlideSubscription = (initialIndex = 0) => {
     }
 
     const handleMessage = (event: MessageEvent<SlideMessage>) => {
-      if (event.data?.type === "sync") {
-        setCurrentIndex(event.data.index);
+      if (event.data?.type === "sync" && event.data.payload) {
+        setState(event.data.payload);
       }
     };
 
@@ -50,5 +51,5 @@ export const useSlideSubscription = (initialIndex = 0) => {
     };
   }, []);
 
-  return currentIndex;
+  return state;
 };

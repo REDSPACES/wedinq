@@ -6,11 +6,12 @@ import { quizSlides } from "../slides";
 
 const AudienceSlidesPage = () => {
   const slides = useMemo(() => [...quizSlides], []);
-  const index = useSlideSubscription(0);
+  const state = useSlideSubscription({ index: 0, phase: "title" });
+  const slide = slides[state.index] ?? slides[0];
 
   return (
     <main className="h-screen w-screen overflow-hidden bg-white">
-      <div className="h-full w-full">{slides[index % slides.length].component}</div>
+      <div className="h-full w-full">{slide.component}</div>
     </main>
   );
 };

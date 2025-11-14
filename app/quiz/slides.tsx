@@ -1,10 +1,18 @@
 import type { ReactNode } from "react";
+import type { SlidePhase } from "@/types/slides";
 
 const borderColors = ["bg-pink-400", "bg-white", "bg-blue-400", "bg-green-500"];
 
 const dotPatternStyle = {
   backgroundImage: "radial-gradient(#fbe36b 1.5px, transparent 1.5px)",
   backgroundSize: "22px 22px",
+};
+
+export type QuizSlide = {
+  id: string;
+  label: string;
+  phase: SlidePhase;
+  component: ReactNode;
 };
 
 const SlideShell = ({ children }: { children: ReactNode }) => (
@@ -142,11 +150,10 @@ const AnswerSlide = () => (
   </SlideShell>
 );
 
-export const quizSlides = [
-  { id: "title", label: "タイトル", component: <TitleSlide /> },
-  { id: "registration", label: "参加登録", component: <RegistrationSlide /> },
-  { id: "rules", label: "ルール", component: <RuleSlide /> },
-  { id: "question", label: "問題", component: <QuestionSlide /> },
-  { id: "answer", label: "回答", component: <AnswerSlide /> },
-] as const;
-
+export const quizSlides: QuizSlide[] = [
+  { id: "title", label: "タイトル", phase: "title", component: <TitleSlide /> },
+  { id: "registration", label: "参加登録", phase: "registration", component: <RegistrationSlide /> },
+  { id: "rules", label: "ルール", phase: "rules", component: <RuleSlide /> },
+  { id: "question", label: "問題", phase: "question", component: <QuestionSlide /> },
+  { id: "answer", label: "回答", phase: "answer", component: <AnswerSlide /> },
+];
