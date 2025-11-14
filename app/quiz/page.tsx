@@ -17,11 +17,6 @@ const steps = [
   },
 ];
 
-const quickLinks = [
-  { title: "ゲスト画面へ", href: "/demo/guest?step=intro" },
-  { title: "スクリーン画面へ", href: "/demo/screen?slide=standby" },
-];
-
 const QuizPage = () => (
   <main className="min-h-screen bg-gradient-to-b from-amber-50 via-rose-50 to-amber-50 px-4 py-16">
     <section className="mx-auto max-w-4xl rounded-[32px] border border-amber-100 bg-white/80 px-8 py-12 shadow-xl shadow-rose-100">
@@ -51,12 +46,12 @@ const QuizPage = () => (
                 className="mt-2 w-full rounded-2xl border border-amber-200 bg-white/70 px-4 py-3 text-base text-amber-900 outline-none focus:border-amber-500"
               />
             </label>
-            <button
-              type="button"
-              className="w-full rounded-full bg-amber-900 px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-amber-50 shadow-lg shadow-amber-900/20"
+            <Link
+              href="/quiz/question"
+              className="block w-full rounded-full bg-amber-900 px-6 py-3 text-center text-sm font-semibold uppercase tracking-[0.3em] text-amber-50 shadow-lg shadow-amber-900/20"
             >
               参加する
-            </button>
+            </Link>
           </form>
         </div>
       </div>
