@@ -14,7 +14,7 @@
     "biome:ci": "biome ci .",
     "typecheck": "tsc --noEmit",
     "test": "echo \"No tests specified\"",
-    "test:emulator": "firebase emulators:exec --project wedinq-local --only firestore,auth \"pnpm test\""
+    "test:emulator": "firebase emulators:exec --project wedinq-local --only firestore,auth,storage \"pnpm test\""
   },
   "dependencies": {
     "firebase": "^11.0.1",
