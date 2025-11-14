@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 const ChevronDown = ({ className }: { className?: string }) => (
@@ -150,12 +151,12 @@ export default function Home() {
                 <span className="text-xs tracking-[0.3em]">SCROLL</span>
                 <ChevronDown className="h-4 w-4 animate-bounce" />
               </div>
-              <button
-                type="button"
+              <Link
+                href="/quiz"
                 className="rounded-full bg-amber-900 px-8 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-amber-50 shadow-lg shadow-amber-900/20 transition hover:bg-amber-950"
               >
                 クイズに参加する
-              </button>
+              </Link>
             </div>
           </div>
         </div>
