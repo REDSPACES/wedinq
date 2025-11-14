@@ -1,11 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useSlideBroadcast } from "@/lib/slide-sync";
 import { quizSlides } from "../slides";
 
 const ScreenSlidesPage = () => {
   const slides = useMemo(() => [...quizSlides], []);
   const [index, setIndex] = useState(0);
+  useSlideBroadcast(index);
 
   const goPrev = useCallback(() => setIndex((prev) => Math.max(prev - 1, 0)), []);
   const goNext = useCallback(() => setIndex((prev) => Math.min(prev + 1, slides.length - 1)), [slides.length]);
