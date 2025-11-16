@@ -2,6 +2,15 @@ import type { ReactNode } from "react";
 import type { SlidePhase } from "@/types/slides";
 
 const borderColors = ["bg-pink-400", "bg-white", "bg-blue-400", "bg-green-500"];
+const diamondSegments = Array.from({ length: 20 }, (_, idx) => ({
+  id: `diamond-${idx}`,
+  color: borderColors[idx % borderColors.length],
+}));
+const ruleBadges = [
+  { id: "rule-left", char: "ル", color: "bg-pink-500" },
+  { id: "rule-center", char: "ー", color: "bg-sky-400" },
+  { id: "rule-right", char: "ル", color: "bg-green-500" },
+];
 
 const dotPatternStyle = {
   backgroundImage: "radial-gradient(#fbe36b 1.5px, transparent 1.5px)",
@@ -27,8 +36,8 @@ const SlideShell = ({ children }: { children: ReactNode }) => (
 
 const DiamondBorder = () => (
   <div className="flex w-full -translate-y-5 justify-center gap-1 overflow-hidden">
-    {Array.from({ length: 20 }).map((_, idx) => (
-      <div key={idx} className={`${borderColors[idx % borderColors.length]} h-16 w-16 -mx-4 rotate-45`} />
+    {diamondSegments.map((segment) => (
+      <div key={segment.id} className={`${segment.color} h-16 w-16 -mx-4 rotate-45`} />
     ))}
   </div>
 );
@@ -59,7 +68,9 @@ const RegistrationSlide = () => (
   <SlideShell>
     <div className="grid h-full items-center gap-10 md:grid-cols-[1.4fr_1fr]">
       <div className="space-y-6 text-amber-800">
-        <p className="inline-block rounded-full bg-pink-400 px-8 py-3 text-2xl font-semibold text-white">参加登録をお願いします</p>
+        <p className="inline-block rounded-full bg-pink-400 px-8 py-3 text-2xl font-semibold text-white">
+          参加登録をお願いします
+        </p>
         <p className="text-3xl leading-relaxed">
           お手元の席札からも読み込めます！
           <br />
@@ -81,14 +92,12 @@ const RuleSlide = () => (
   <SlideShell>
     <div className="flex h-full flex-col items-center justify-center gap-6 text-center text-amber-900">
       <div className="flex items-center gap-6">
-        {["ル", "ー", "ル"].map((char, index) => (
+        {ruleBadges.map((badge) => (
           <div
-            key={`${char}-${index}`}
-            className={`flex h-24 w-24 items-center justify-center rounded-full text-3xl font-bold text-white shadow-xl ${
-              ["bg-pink-500", "bg-sky-400", "bg-green-500"][index]
-            }`}
+            key={badge.id}
+            className={`flex h-24 w-24 items-center justify-center rounded-full text-3xl font-bold text-white shadow-xl ${badge.color}`}
           >
-            {char}
+            {badge.char}
           </div>
         ))}
       </div>
@@ -101,13 +110,20 @@ const RuleSlide = () => (
 
 const QuestionSlide = () => (
   <SlideShell>
-    <div className="grid h-full gap-8 rounded-[36px] bg-[#ffe8f7] p-8 text-amber-900" style={{ boxShadow: "inset 0 0 0 4px #ff8bd1" }}>
+    <div
+      className="grid h-full gap-8 rounded-[36px] bg-[#ffe8f7] p-8 text-amber-900"
+      style={{ boxShadow: "inset 0 0 0 4px #ff8bd1" }}
+    >
       <div className="flex items-start justify-between">
         <div className="inline-flex items-center gap-4 rounded-full bg-white px-6 py-3 text-amber-900 shadow">
-          <span className="rounded-full bg-[#8c5135] px-4 py-2 text-xl font-bold text-white">Q1</span>
+          <span className="rounded-full bg-[#8c5135] px-4 py-2 text-xl font-bold text-white">
+            Q1
+          </span>
           <span className="text-2xl font-semibold">新郎新婦の初デートの場所はどこでしょうか？</span>
         </div>
-        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#f3a033] text-3xl font-bold text-white">30</div>
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[#f3a033] text-3xl font-bold text-white">
+          30
+        </div>
       </div>
       <div className="grid gap-6 md:grid-cols-[1.2fr_0.8fr]">
         <div className="space-y-4">
@@ -132,9 +148,14 @@ const QuestionSlide = () => (
 
 const AnswerSlide = () => (
   <SlideShell>
-    <div className="grid h-full gap-8 rounded-[36px] bg-[#ffe8f7] p-8 text-amber-900" style={{ boxShadow: "inset 0 0 0 4px #ff8bd1" }}>
+    <div
+      className="grid h-full gap-8 rounded-[36px] bg-[#ffe8f7] p-8 text-amber-900"
+      style={{ boxShadow: "inset 0 0 0 4px #ff8bd1" }}
+    >
       <div className="flex items-center gap-4">
-        <span className="rounded-full bg-[#8c5135] px-6 py-3 text-2xl font-bold text-white">A1</span>
+        <span className="rounded-full bg-[#8c5135] px-6 py-3 text-2xl font-bold text-white">
+          A1
+        </span>
         <p className="text-4xl font-semibold">
           答えは <span className="text-sky-400">B</span> 熱海
         </p>
@@ -143,7 +164,9 @@ const AnswerSlide = () => (
         <p className="text-3xl leading-relaxed">しらす丼が美味しかったー！またいきたいね</p>
         <div className="flex items-center justify-between">
           <div className="h-40 w-52 rounded-[28px] bg-white shadow-lg" />
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-500 text-3xl text-white">▶</div>
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-500 text-3xl text-white">
+            ▶
+          </div>
         </div>
       </div>
     </div>
@@ -152,7 +175,12 @@ const AnswerSlide = () => (
 
 export const quizSlides: QuizSlide[] = [
   { id: "title", label: "タイトル", phase: "title", component: <TitleSlide /> },
-  { id: "registration", label: "参加登録", phase: "registration", component: <RegistrationSlide /> },
+  {
+    id: "registration",
+    label: "参加登録",
+    phase: "registration",
+    component: <RegistrationSlide />,
+  },
   { id: "rules", label: "ルール", phase: "rules", component: <RuleSlide /> },
   { id: "question", label: "問題", phase: "question", component: <QuestionSlide /> },
   { id: "answer", label: "回答", phase: "answer", component: <AnswerSlide /> },

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useSlideSubscription } from "@/lib/slide-sync";
 
 const options = [
@@ -37,9 +37,13 @@ const QuizQuestionPage = () => {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,_#f9dcd7,_#eeb6aa,_#e6a08f)] px-4 py-10">
         <div className="w-full max-w-sm rounded-[32px] bg-[#fdf5f2] p-10 text-center shadow-[0_0_40px_rgba(215,149,129,0.35)]">
-          <p className="text-3xl font-semibold text-[#c18077]">{isAnswerPhase ? "結果発表中" : "まもなく開始"}</p>
+          <p className="text-3xl font-semibold text-[#c18077]">
+            {isAnswerPhase ? "結果発表中" : "まもなく開始"}
+          </p>
           <p className="mt-4 text-lg leading-relaxed text-[#c18077]">
-            {isAnswerPhase ? "スクリーンで答え合わせをご覧ください。" : "司会者の合図があるまでお待ちください。"}
+            {isAnswerPhase
+              ? "スクリーンで答え合わせをご覧ください。"
+              : "司会者の合図があるまでお待ちください。"}
           </p>
         </div>
       </main>
@@ -88,9 +92,7 @@ const QuizQuestionPage = () => {
             );
           })}
 
-          <p className="pt-6 text-center text-sm text-[#c18077]">
-            1つ選んで送信ボタンを押してね
-          </p>
+          <p className="pt-6 text-center text-sm text-[#c18077]">1つ選んで送信ボタンを押してね</p>
           <button
             type="submit"
             disabled={!selected || submitted}
