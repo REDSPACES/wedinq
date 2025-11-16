@@ -15,6 +15,30 @@ export type QuizSlide = {
   component: ReactNode;
 };
 
+const ImageSlide = ({ src, alt }: { src: string; alt?: string }) => (
+  <div className="flex h-full w-full items-center justify-center rounded-[36px] bg-slate-100">
+    <div className="relative aspect-video w-full max-w-6xl overflow-hidden rounded-[28px] bg-white shadow-2xl ring-4 ring-white">
+      <img
+        key={src}
+        src={src}
+        alt={alt ?? src}
+        loading="lazy"
+        decoding="async"
+        className="absolute inset-0 h-full w-full bg-white object-contain"
+      />
+    </div>
+  </div>
+);
+
+// JPG を差し替える場合は /public/slides 以下に置き、src を書き換えてください。
+const imageSlides: QuizSlide[] = [
+  { id: "img-title", label: "タイトル", phase: "title", component: <ImageSlide src="/slides/title.jpg" alt="タイトル" /> },
+  { id: "img-registration", label: "参加登録", phase: "registration", component: <ImageSlide src="/slides/registration.jpg" alt="参加登録" /> },
+  { id: "img-rules", label: "ルール", phase: "rules", component: <ImageSlide src="/slides/rules.jpg" alt="ルール" /> },
+  { id: "img-question-1", label: "Q1", phase: "question", component: <ImageSlide src="/slides/question-1.jpg" alt="Q1" /> },
+  { id: "img-answer-1", label: "A1", phase: "answer", component: <ImageSlide src="/slides/answer-1.jpg" alt="A1" /> },
+];
+
 const SlideShell = ({ children }: { children: ReactNode }) => (
   <div className="flex h-full flex-col" style={dotPatternStyle}>
     <DiamondBorder />
@@ -151,9 +175,6 @@ const AnswerSlide = () => (
 );
 
 export const quizSlides: QuizSlide[] = [
-  { id: "title", label: "タイトル", phase: "title", component: <TitleSlide /> },
-  { id: "registration", label: "参加登録", phase: "registration", component: <RegistrationSlide /> },
-  { id: "rules", label: "ルール", phase: "rules", component: <RuleSlide /> },
-  { id: "question", label: "問題", phase: "question", component: <QuestionSlide /> },
-  { id: "answer", label: "回答", phase: "answer", component: <AnswerSlide /> },
+  // こちらを参照してスライドを表示します。画像を差し替えるだけで OK。
+  ...imageSlides,
 ];
