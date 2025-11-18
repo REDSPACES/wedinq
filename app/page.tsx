@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
@@ -13,6 +14,7 @@ const ChevronDown = ({ className }: { className?: string }) => (
     strokeLinejoin="round"
     className={className}
   >
+    <title>Chevron down</title>
     <polyline points="6 9 12 15 18 9" />
   </svg>
 );
@@ -44,16 +46,11 @@ export default function Home() {
   return (
     <main className="flex min-h-screen items-center justify-center overflow-x-hidden bg-gradient-to-b from-amber-50 via-rose-50 to-amber-50">
       <div className="pointer-events-none fixed left-0 top-0 h-96 w-96 opacity-60">
-        <svg
-          viewBox="0 0 300 300"
-          className="h-full w-full"
-          preserveAspectRatio="xMidYMid slice"
-        >
+        <svg viewBox="0 0 300 300" className="h-full w-full" preserveAspectRatio="xMidYMid slice">
+          <title>Top left floral decoration</title>
           <g
             className={`transition-all duration-1000 ${
-              isLoaded
-                ? "translate-y-0 opacity-100"
-                : "-translate-y-12 opacity-0"
+              isLoaded ? "translate-y-0 opacity-100" : "-translate-y-12 opacity-0"
             }`}
           >
             <circle cx="120" cy="80" r="25" fill="#fce7f3" opacity="0.7" />
@@ -64,33 +61,18 @@ export default function Home() {
             <circle cx="160" cy="60" r="20" fill="#be123c" opacity="0.6" />
             <circle cx="180" cy="70" r="18" fill="#991b1b" opacity="0.7" />
             <circle cx="170" cy="85" r="16" fill="#7c2d12" opacity="0.6" />
-            <path
-              d="M 125 110 Q 120 130 115 150"
-              stroke="#86efac"
-              strokeWidth="2"
-              fill="none"
-            />
-            <path
-              d="M 145 110 Q 155 135 165 160"
-              stroke="#86efac"
-              strokeWidth="2"
-              fill="none"
-            />
+            <path d="M 125 110 Q 120 130 115 150" stroke="#86efac" strokeWidth="2" fill="none" />
+            <path d="M 145 110 Q 155 135 165 160" stroke="#86efac" strokeWidth="2" fill="none" />
           </g>
         </svg>
       </div>
 
       <div className="pointer-events-none fixed bottom-0 right-0 h-96 w-96 opacity-60">
-        <svg
-          viewBox="0 0 300 300"
-          className="h-full w-full"
-          preserveAspectRatio="xMidYMid slice"
-        >
+        <svg viewBox="0 0 300 300" className="h-full w-full" preserveAspectRatio="xMidYMid slice">
+          <title>Bottom right floral decoration</title>
           <g
             className={`delay-200 transition-all duration-1000 ${
-              isLoaded
-                ? "translate-y-0 opacity-100"
-                : "translate-y-12 opacity-0"
+              isLoaded ? "translate-y-0 opacity-100" : "translate-y-12 opacity-0"
             }`}
           >
             <circle cx="180" cy="220" r="26" fill="#fce7f3" opacity="0.7" />
@@ -142,8 +124,8 @@ export default function Home() {
             </div>
 
             <p className="mx-auto max-w-xl text-lg leading-relaxed text-amber-900">
-              We joyfully invite you to celebrate the union of our hearts as we
-              begin our journey together as one.
+              We joyfully invite you to celebrate the union of our hearts as we begin our journey
+              together as one.
             </p>
 
             <div className="mt-12 flex flex-col items-center justify-center gap-4">
@@ -161,10 +143,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div
-          ref={messageRef}
-          className="flex min-h-screen items-center justify-center px-6 py-12"
-        >
+        <div ref={messageRef} className="flex min-h-screen items-center justify-center px-6 py-12">
           <div
             className={`w-full max-w-2xl transition-all duration-1000 ${
               showMessage ? "scale-100 opacity-100" : "scale-95 opacity-0"
@@ -176,6 +155,7 @@ export default function Home() {
                 viewBox="0 0 500 700"
                 preserveAspectRatio="none"
               >
+                <title>Decorative frame</title>
                 <rect
                   x="20"
                   y="20"
@@ -197,43 +177,19 @@ export default function Home() {
               </svg>
 
               <div className="relative z-10 p-8 pt-12">
-                <h3 className="mb-6 text-3xl font-light tracking-wide text-amber-900">
-                  Message
-                </h3>
+                <h3 className="mb-6 text-3xl font-light tracking-wide text-amber-900">Message</h3>
 
                 <div className="mb-6 flex justify-center">
-                  <svg
-                    width="200"
-                    height="40"
-                    viewBox="0 0 200 40"
-                    className="text-pink-300"
-                  >
+                  <svg width="200" height="40" viewBox="0 0 200 40" className="text-pink-300">
+                    <title>Floral divider</title>
                     <path
                       d="M 30 20 Q 35 10 40 5 Q 38 15 30 20"
                       fill="currentColor"
                       opacity="0.6"
                     />
-                    <circle
-                      cx="50"
-                      cy="18"
-                      r="3"
-                      fill="currentColor"
-                      opacity="0.5"
-                    />
-                    <circle
-                      cx="65"
-                      cy="20"
-                      r="4"
-                      fill="currentColor"
-                      opacity="0.6"
-                    />
-                    <circle
-                      cx="75"
-                      cy="18"
-                      r="3"
-                      fill="currentColor"
-                      opacity="0.5"
-                    />
+                    <circle cx="50" cy="18" r="3" fill="currentColor" opacity="0.5" />
+                    <circle cx="65" cy="20" r="4" fill="currentColor" opacity="0.6" />
+                    <circle cx="75" cy="18" r="3" fill="currentColor" opacity="0.5" />
                     <line
                       x1="40"
                       y1="20"
@@ -243,20 +199,8 @@ export default function Home() {
                       strokeWidth="1"
                       opacity="0.4"
                     />
-                    <circle
-                      cx="125"
-                      cy="20"
-                      r="3"
-                      fill="currentColor"
-                      opacity="0.5"
-                    />
-                    <circle
-                      cx="135"
-                      cy="22"
-                      r="4"
-                      fill="currentColor"
-                      opacity="0.6"
-                    />
+                    <circle cx="125" cy="20" r="3" fill="currentColor" opacity="0.5" />
+                    <circle cx="135" cy="22" r="4" fill="currentColor" opacity="0.6" />
                     <path
                       d="M 160 20 Q 165 10 170 5 Q 168 15 160 20"
                       fill="currentColor"
@@ -265,22 +209,21 @@ export default function Home() {
                   </svg>
                 </div>
 
-                <div className="mb-8 flex aspect-square items-center justify-center overflow-hidden rounded-sm bg-gray-200">
-                  <img
+                <div className="mb-8 flex aspect-square items-center justify-center overflow-hidden rounded-sm bg-gray-200 relative">
+                  <Image
                     src="/wedding-couple-photo-elegant-white-room.jpg"
                     alt="Wedding couple"
-                    className="h-full w-full object-cover"
+                    fill
+                    sizes="(min-width: 768px) 400px, 300px"
+                    className="object-cover"
+                    priority
                   />
                 </div>
 
                 <div className="space-y-3 text-center text-sm font-light leading-relaxed text-amber-900">
-                  <p>
-                    本日はご多用中にもかかわらずお越しくださり誠にありがとうございます。
-                  </p>
+                  <p>本日はご多用中にもかかわらずお越しくださり誠にありがとうございます。</p>
                   <p>皆さまと共にこの日を迎えられたことを嬉しく思います。</p>
-                  <p>
-                    ささやかではございますが、心を込めておもてなしさせていただきます。
-                  </p>
+                  <p>ささやかではございますが、心を込めておもてなしさせていただきます。</p>
                   <p>どうぞごゆっくりとお過ごしください</p>
                 </div>
               </div>

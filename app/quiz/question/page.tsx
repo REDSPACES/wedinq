@@ -64,9 +64,7 @@ const QuizQuestionPage = () => {
             );
           })}
 
-          <p className="pt-6 text-center text-sm text-[#c18077]">
-            1つ選んで送信ボタンを押してね
-          </p>
+          <p className="pt-6 text-center text-sm text-[#c18077]">1つ選んで送信ボタンを押してね</p>
           <button
             type="submit"
             disabled={!selected || submitted}

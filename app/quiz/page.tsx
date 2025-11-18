@@ -3,13 +3,11 @@ import Link from "next/link";
 const steps = [
   {
     title: "STEP 1",
-    description:
-      "クイズは全部で５問出題されます。各問題には４つの選択肢があります。",
+    description: "クイズは全部で５問出題されます。各問題には４つの選択肢があります。",
   },
   {
     title: "STEP 2",
-    description:
-      "制限時間30秒以内に答えだと思う項目をスマートフォンから選んでください",
+    description: "制限時間30秒以内に答えだと思う項目をスマートフォンから選んでください",
   },
   {
     title: "STEP 3",
@@ -21,15 +19,11 @@ const QuizPage = () => (
   <main className="min-h-screen bg-gradient-to-b from-amber-50 via-rose-50 to-amber-50 px-4 py-16">
     <section className="mx-auto max-w-4xl rounded-[32px] border border-amber-100 bg-white/80 px-8 py-12 shadow-xl shadow-rose-100">
       <header className="text-center">
-        <p className="text-sm uppercase tracking-[0.4em] text-amber-700">
-          Wedinq Quiz
-        </p>
+        <p className="text-sm uppercase tracking-[0.4em] text-amber-700">Wedinq Quiz</p>
         <h1 className="mt-4 text-4xl font-light leading-tight text-amber-900 md:text-5xl">
           クイズに参加する
         </h1>
-        <p className="mt-3 text-3 text-amber-700">
-          新郎新婦のことどのくらいわかるかな？
-        </p>
+        <p className="mt-3 text-3 text-amber-700">新郎新婦のことどのくらいわかるかな？</p>
       </header>
 
       <div className="mt-12 grid gap-8 md:grid-cols-[1.1fr_0.9fr]">
@@ -58,10 +52,7 @@ const QuizPage = () => (
 
       <section className="mt-12 grid gap-6 md:grid-cols-3">
         {steps.map((step) => (
-          <div
-            key={step.title}
-            className="rounded-3xl border border-amber-100 bg-white/70 p-6"
-          >
+          <div key={step.title} className="rounded-3xl border border-amber-100 bg-white/70 p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.4em] text-amber-600">
               {step.title}
             </p>
