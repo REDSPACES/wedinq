@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
-import type { ScreenDisplayState, RankingEntry } from "../../../types/quiz";
+import { useCallback, useEffect, useState } from "react";
 import {
-  TOTAL_QUESTIONS,
   TIME_LIMIT_SECONDS,
   TIMER_INTERVAL_MS,
+  TOTAL_QUESTIONS,
 } from "../../../lib/constants/quiz";
 import { getSlideImagePath } from "../../../lib/utils/quiz-images";
+import type { RankingEntry, ScreenDisplayState } from "../../../types/quiz";
 
 export default function ScreenDisplayContent() {
   const [state, setState] = useState<ScreenDisplayState>("standby");
@@ -35,7 +35,12 @@ export default function ScreenDisplayContent() {
     return [
       { rank: 1, nickname: "太郎さん", correctCount: currentQuestion, averageResponseTime: 2.3 },
       { rank: 2, nickname: "花子さん", correctCount: currentQuestion, averageResponseTime: 3.1 },
-      { rank: 3, nickname: "次郎さん", correctCount: currentQuestion - 1, averageResponseTime: 2.8 },
+      {
+        rank: 3,
+        nickname: "次郎さん",
+        correctCount: currentQuestion - 1,
+        averageResponseTime: 2.8,
+      },
     ];
   }, [currentQuestion]);
 
@@ -129,9 +134,7 @@ export default function ScreenDisplayContent() {
               {/* 問題番号（左上） */}
               <div className="absolute left-12 top-12 z-10">
                 <div className="rounded-2xl bg-white/90 px-8 py-4 shadow-lg backdrop-blur-sm">
-                  <span className="text-4xl font-bold text-pink-900">
-                    第 {currentQuestion} 問
-                  </span>
+                  <span className="text-4xl font-bold text-pink-900">第 {currentQuestion} 問</span>
                 </div>
               </div>
 

@@ -1,12 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import type { SessionStatus, GuestAnswer, RankingEntry } from "../../../types/quiz";
-import {
-  TOTAL_QUESTIONS,
-  CHOICE_LABELS,
-  RANKING_DISPLAY_COUNT,
-} from "../../../lib/constants/quiz";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { CHOICE_LABELS, RANKING_DISPLAY_COUNT, TOTAL_QUESTIONS } from "../../../lib/constants/quiz";
+import type { GuestAnswer, RankingEntry, SessionStatus } from "../../../types/quiz";
 
 export default function ControlPanelContent() {
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>("waiting");
@@ -77,7 +73,10 @@ export default function ControlPanelContent() {
   // 最終ランキング計算（全問題の回答から計算）
   const calculateFinalRankings = useCallback((allAnswersData: GuestAnswer[]): RankingEntry[] => {
     // ゲストごとに集計
-    const guestStats = new Map<string, { nickname: string; correctCount: number; totalTime: number }>();
+    const guestStats = new Map<
+      string,
+      { nickname: string; correctCount: number; totalTime: number }
+    >();
 
     for (const answer of allAnswersData) {
       if (!answer.isCorrect) continue;
@@ -327,15 +326,15 @@ export default function ControlPanelContent() {
                       >
                         {answer.isCorrect ? "正解" : "不正解"}
                       </span>
-                      <span className="text-lg font-semibold text-gray-800">
-                        {answer.nickname}
-                      </span>
+                      <span className="text-lg font-semibold text-gray-800">{answer.nickname}</span>
                     </div>
                     <div className="text-right">
                       <div className="text-sm text-gray-600">
                         選択: {CHOICE_LABELS[answer.choice]}
                       </div>
-                      <div className="text-xs text-gray-500">{getElapsedTime(answer.answeredAt)}秒</div>
+                      <div className="text-xs text-gray-500">
+                        {getElapsedTime(answer.answeredAt)}秒
+                      </div>
                     </div>
                   </div>
                 ))

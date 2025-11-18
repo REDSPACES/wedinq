@@ -56,7 +56,7 @@ export function getSlideImagePath(type: SlideType, questionNumber?: number): str
 /**
  * 画像パスの存在チェック（開発用）
  */
-export function validateImagePath(path: string): boolean {
+export function validateImagePath(_path: string): boolean {
   // 本番環境では常にtrueを返す（サーバーサイドでのチェックを避けるため）
   if (typeof window === "undefined") {
     return true;
