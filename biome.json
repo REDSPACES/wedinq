@@ -2,7 +2,7 @@
   "$schema": "https://biomejs.dev/schemas/2.3.5/schema.json",
   "root": true,
   "files": {
-    "includes": ["**/*", "!.next", "!node_modules", "!out", "!build"]
+    "includes": ["**/*", "!.next", "!node_modules", "!out", "!build", "!V0-TOPpagecode"]
   },
   "formatter": {
     "indentStyle": "space",
