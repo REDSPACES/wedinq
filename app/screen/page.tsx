@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import type { ScreenDisplayState, RankingEntry } from "../../types/quiz";
 
 export default function ScreenPage() {
@@ -106,9 +107,32 @@ export default function ScreenPage() {
 
               {/* 問題画像エリア */}
               <div className="flex h-full items-center justify-center p-24">
-                <div className="h-full w-full rounded-3xl bg-gradient-to-br from-gray-100 to-gray-200 shadow-2xl">
-                  <div className="flex h-full items-center justify-center">
-                    <span className="text-4xl text-gray-500">問題画像（JPGスライド）</span>
+                <div className="relative h-full w-full overflow-hidden rounded-3xl shadow-2xl">
+                  <Image
+                    src={`/quiz-slides/question-${currentQuestion}.jpg`}
+                    alt={`第${currentQuestion}問`}
+                    fill
+                    className="object-contain"
+                    priority
+                    onError={(e) => {
+                      // 画像が見つからない場合はプレースホルダーを表示
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = "none";
+                      if (target.nextElementSibling) {
+                        (target.nextElementSibling as HTMLElement).style.display = "flex";
+                      }
+                    }}
+                  />
+                  {/* 画像が存在しない場合のプレースホルダー */}
+                  <div className="hidden h-full w-full items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                    <div className="text-center">
+                      <span className="text-4xl text-gray-500">問題画像（JPGスライド）</span>
+                      <p className="mt-4 text-xl text-gray-400">
+                        /public/quiz-slides/question-{currentQuestion}.jpg
+                        <br />
+                        上記のパスに画像を配置してください
+                      </p>
+                    </div>
                   </div>
                 </div>
               </div>
