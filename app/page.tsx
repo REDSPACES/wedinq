@@ -13,22 +13,44 @@ export default function Home() {
           style={{ backgroundImage: floralBackground }}
         >
           <div className="absolute left-0 top-0 h-24 w-full" aria-hidden />
-          <p className="text-[40px] font-semibold leading-[1.1] text-[#5a433d]" style={{ fontFamily: '"Playfair Display", "Times New Roman", serif' }}>
+          <p
+            className="text-[40px] font-semibold leading-[1.1] text-[#5a433d]"
+            style={{ fontFamily: '"Playfair Display", "Times New Roman", serif' }}
+          >
             Happy
             <br />
             Wedding
           </p>
-          <p className="mt-4 text-lg font-semibold text-[#6a5149]" style={{ fontFamily: '"Shippori Mincho", "Noto Serif JP", "Hiragino Mincho ProN", serif' }}>
+          <p
+            className="mt-4 text-lg font-semibold text-[#6a5149]"
+            style={{
+              fontFamily: '"Shippori Mincho", "Noto Serif JP", "Hiragino Mincho ProN", serif',
+            }}
+          >
             Akito &amp; Marina
           </p>
           <p className="text-sm text-[#8a7a75]">20 May 2026</p>
           <div className="mt-6 flex justify-center">
             <div className="flex flex-col items-center gap-1 text-[#777]">
               <svg width="32" height="20" viewBox="0 0 32 20" fill="none" aria-hidden>
-                <path d="M3 3l13 13L29 3" stroke="#8b8b8b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                <title>Decorative chevron</title>
+                <path
+                  d="M3 3l13 13L29 3"
+                  stroke="#8b8b8b"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
               <svg width="32" height="20" viewBox="0 0 32 20" fill="none" aria-hidden>
-                <path d="M3 3l13 13L29 3" stroke="#8b8b8b" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+                <title>Decorative chevron</title>
+                <path
+                  d="M3 3l13 13L29 3"
+                  stroke="#8b8b8b"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
               </svg>
             </div>
           </div>
@@ -48,9 +70,13 @@ export default function Home() {
           className="relative overflow-hidden rounded-[32px] border-[3px] border-[#c8bda9] bg-[#fffaf5] px-6 pb-10 pt-14 shadow-[0_16px_40px_rgba(0,0,0,0.04)]"
           style={{ backgroundImage: archBackground }}
         >
-          <div className="absolute inset-x-6 top-6 flex items-center justify-between text-[#c8bda9]" aria-hidden>
+          <div
+            className="absolute inset-x-6 top-6 flex items-center justify-between text-[#c8bda9]"
+            aria-hidden
+          >
             <span className="h-[2px] w-12 rounded-full bg-[#c8bda9]" />
             <svg width="52" height="20" viewBox="0 0 52 20" fill="none">
+              <title>Decorative arch</title>
               <path
                 d="M2 10.5c14-12 34-12 48 0"
                 stroke="#c8bda9"
@@ -74,7 +100,9 @@ export default function Home() {
           </div>
           <p
             className="mt-6 whitespace-pre-line text-center text-lg leading-9 text-[#5d463e]"
-            style={{ fontFamily: '"Shippori Mincho", "Noto Serif JP", "Hiragino Mincho ProN", serif' }}
+            style={{
+              fontFamily: '"Shippori Mincho", "Noto Serif JP", "Hiragino Mincho ProN", serif',
+            }}
           >
             本日はご多用中にもかかわらず{"\n"}
             お越しくださり誠にありがとうございます{"\n"}
@@ -95,7 +123,9 @@ export default function Home() {
           </h3>
           <p
             className="mt-6 text-[19px] leading-9 text-[#5f4b44]"
-            style={{ fontFamily: '"Shippori Mincho", "Noto Serif JP", "Hiragino Mincho ProN", serif' }}
+            style={{
+              fontFamily: '"Shippori Mincho", "Noto Serif JP", "Hiragino Mincho ProN", serif',
+            }}
           >
             皆様にお楽しみいただけるように{"\n"}
             クイズ企画をご用意しました！{"\n"}
@@ -103,8 +133,11 @@ export default function Home() {
             始めるをタップしてください。
           </p>
           <button
+            type="button"
             className="mt-8 w-full max-w-[320px] rounded-full bg-[linear-gradient(135deg,#ffd8d2,#f6a3a0_40%,#f07c7c)] px-8 py-4 text-xl font-semibold text-[#3c2b29] shadow-[0_12px_0_rgba(222,111,111,0.4),0_12px_24px_rgba(0,0,0,0.12)] transition-transform duration-150 active:translate-y-[3px] active:shadow-[0_4px_0_rgba(222,111,111,0.4),0_8px_16px_rgba(0,0,0,0.12)]"
-            style={{ fontFamily: '"Shippori Mincho", "Noto Serif JP", "Hiragino Mincho ProN", serif' }}
+            style={{
+              fontFamily: '"Shippori Mincho", "Noto Serif JP", "Hiragino Mincho ProN", serif',
+            }}
           >
             はじめる
           </button>
