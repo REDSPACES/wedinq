@@ -1,3 +1,7 @@
+"use client";
+
+import { useRouter } from "next/navigation";
+
 const floralBackground =
   "radial-gradient(circle at 10% 20%, rgba(243, 216, 214, 0.55), transparent 35%), radial-gradient(circle at 90% 15%, rgba(231, 194, 189, 0.6), transparent 36%), radial-gradient(circle at 20% 80%, rgba(230, 200, 150, 0.38), transparent 34%), radial-gradient(circle at 85% 75%, rgba(210, 177, 153, 0.32), transparent 34%)";
 
@@ -5,6 +9,7 @@ const archBackground =
   "radial-gradient(120% 65% at 50% 0%, rgba(255, 248, 244, 0.9), #fff6f1 72%, #f1e7dd 73%)";
 
 export default function Home() {
+  const router = useRouter();
   return (
     <div className="flex min-h-screen justify-center bg-[#fdf7f5] text-[#5d463e]">
       <main className="flex w-full max-w-[520px] flex-col gap-14 px-5 pb-16 pt-8">
@@ -134,6 +139,7 @@ export default function Home() {
           </p>
           <button
             type="button"
+            onClick={() => router.push("/quiz")}
             className="mt-8 w-full max-w-[320px] rounded-full bg-[linear-gradient(135deg,#ffd8d2,#f6a3a0_40%,#f07c7c)] px-8 py-4 text-xl font-semibold text-[#3c2b29] shadow-[0_12px_0_rgba(222,111,111,0.4),0_12px_24px_rgba(0,0,0,0.12)] transition-transform duration-150 active:translate-y-[3px] active:shadow-[0_4px_0_rgba(222,111,111,0.4),0_8px_16px_rgba(0,0,0,0.12)]"
             style={{
               fontFamily: '"Shippori Mincho", "Noto Serif JP", "Hiragino Mincho ProN", serif',
