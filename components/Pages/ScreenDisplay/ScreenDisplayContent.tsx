@@ -80,8 +80,8 @@ export default function ScreenDisplayContent() {
 
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-gray-900">
-      {/* 16:9 アスペクト比のコンテナ */}
-      <div className="relative h-full w-full max-h-screen max-w-[177.78vh]">
+      {/* ワイドコンテナ */}
+      <div className="relative h-full w-full">
         <div className="relative h-full w-full bg-gradient-to-br from-pink-50 via-white to-pink-50">
           {/* 待機画面 */}
           {state === "standby" && (
@@ -131,12 +131,6 @@ export default function ScreenDisplayContent() {
                 </div>
               </div>
 
-              {/* 問題番号（左上） */}
-              <div className="absolute left-12 top-12 z-10">
-                <div className="rounded-2xl bg-white/90 px-8 py-4 shadow-lg backdrop-blur-sm">
-                  <span className="text-4xl font-bold text-pink-900">第 {currentQuestion} 問</span>
-                </div>
-              </div>
 
               {/* 問題画像 */}
               <Image
@@ -159,14 +153,6 @@ export default function ScreenDisplayContent() {
                 </div>
               )}
 
-              {/* 次へボタン */}
-              <button
-                type="button"
-                onClick={handleNext}
-                className="absolute bottom-12 right-12 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-12 py-5 text-2xl font-bold text-white shadow-lg transition-all hover:scale-105"
-              >
-                結果を表示 →
-              </button>
             </div>
           )}
 
@@ -224,13 +210,6 @@ export default function ScreenDisplayContent() {
                 </div>
               )}
 
-              <button
-                type="button"
-                onClick={handleNext}
-                className="absolute bottom-12 right-12 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-16 py-6 text-3xl font-bold text-white shadow-lg transition-all hover:scale-105"
-              >
-                {currentQuestion < TOTAL_QUESTIONS ? "次の問題へ →" : "最終結果を表示 →"}
-              </button>
             </div>
           )}
 
