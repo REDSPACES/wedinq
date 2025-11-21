@@ -11,9 +11,9 @@ export default function ControlPanelContent() {
   const [answerCount, setAnswerCount] = useState(0);
   const [answers, setAnswers] = useState<GuestAnswer[]>([]);
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
-  const [allAnswers, setAllAnswers] = useState<GuestAnswer[]>([]); // 全問題の回答を保存
+  const [allAnswers, setAllAnswers] = useState<GuestAnswer[]>([]);
 
-  // モックデータ生成（useEffectの無限ループを防ぐためにuseMemoを使用）
+  // モックデータ生成
   const mockAnswersData = useMemo(() => {
     if (sessionStatus !== "playing") return [];
 
@@ -41,21 +41,19 @@ export default function ControlPanelContent() {
         questionNumber: currentQuestion,
         choice: 1,
         answeredAt: baseTime - 2800,
-        isCorrect: Math.random() > 0.3, // ランダムに正解/不正解
+        isCorrect: Math.random() > 0.3,
       },
     ];
   }, [sessionStatus, currentQuestion]);
 
-  // モックデータをセット（依存関係を最小限に）
   useEffect(() => {
     if (sessionStatus === "playing" && mockAnswersData.length > 0) {
       setAnswers(mockAnswersData);
-      setGuestCount(Math.floor(Math.random() * 10) + 20); // 20-30名
-      setAnswerCount(Math.floor(Math.random() * 10) + 15); // 15-25件
+      setGuestCount(Math.floor(Math.random() * 10) + 20);
+      setAnswerCount(Math.floor(Math.random() * 10) + 15);
     }
   }, [sessionStatus, mockAnswersData]);
 
-  // セッション開始
   const handleStart = useCallback(() => {
     try {
       setSessionStatus("playing");
@@ -70,9 +68,7 @@ export default function ControlPanelContent() {
     }
   }, []);
 
-  // 最終ランキング計算（全問題の回答から計算）
   const calculateFinalRankings = useCallback((allAnswersData: GuestAnswer[]): RankingEntry[] => {
-    // ゲストごとに集計
     const guestStats = new Map<
       string,
       { nickname: string; correctCount: number; totalTime: number }
@@ -82,7 +78,7 @@ export default function ControlPanelContent() {
       if (!answer.isCorrect) continue;
 
       const existing = guestStats.get(answer.guestId);
-      const responseTime = answer.answeredAt; // 実際には問題開始時刻からの経過時間
+      const responseTime = answer.answeredAt;
 
       if (existing) {
         existing.correctCount++;
@@ -96,37 +92,29 @@ export default function ControlPanelContent() {
       }
     }
 
-    // ランキング作成（正解数 > 平均回答時間の順）
     const rankingList = Array.from(guestStats.entries())
-      .map(([guestId, stats]) => ({
-        guestId,
+      .map(([, stats]) => ({
         nickname: stats.nickname,
         correctCount: stats.correctCount,
-        averageResponseTime: stats.totalTime / stats.correctCount / 1000, // 秒に変換
+        averageResponseTime: stats.totalTime / stats.correctCount / 1000,
       }))
       .sort((a, b) => {
-        // 正解数が多い方が上位
         if (a.correctCount !== b.correctCount) {
           return b.correctCount - a.correctCount;
         }
-        // 正解数が同じ場合は平均回答時間が短い方が上位
         return a.averageResponseTime - b.averageResponseTime;
       })
       .slice(0, RANKING_DISPLAY_COUNT)
       .map((entry, index) => ({
         rank: index + 1,
-        nickname: entry.nickname,
-        correctCount: entry.correctCount,
-        averageResponseTime: entry.averageResponseTime,
+        ...entry,
       }));
 
     return rankingList;
   }, []);
 
-  // 次の問題へ
   const handleNextQuestion = useCallback(() => {
     try {
-      // 現在の回答を全回答リストに追加
       setAllAnswers((prev) => [...prev, ...answers]);
 
       if (currentQuestion < TOTAL_QUESTIONS) {
@@ -135,7 +123,6 @@ export default function ControlPanelContent() {
         setRankings([]);
         console.log(`Moving to question ${currentQuestion + 1}`);
       } else {
-        // 最終結果を計算
         const allAnswersWithCurrent = [...allAnswers, ...answers];
         const finalRankings = calculateFinalRankings(allAnswersWithCurrent);
         setRankings(finalRankings);
@@ -148,7 +135,6 @@ export default function ControlPanelContent() {
     }
   }, [currentQuestion, answers, allAnswers, calculateFinalRankings]);
 
-  // セッションリセット
   const handleReset = useCallback(() => {
     try {
       setSessionStatus("waiting");
@@ -165,17 +151,16 @@ export default function ControlPanelContent() {
     }
   }, []);
 
-  // 現在の問題の結果を表示
   const handleShowResults = useCallback(() => {
     try {
       const currentRankings: RankingEntry[] = answers
         .filter((a) => a.isCorrect)
-        .sort((a, b) => a.answeredAt - b.answeredAt) // 回答時刻が早い順
+        .sort((a, b) => a.answeredAt - b.answeredAt)
         .slice(0, RANKING_DISPLAY_COUNT)
         .map((a, index) => ({
           rank: index + 1,
           nickname: a.nickname,
-          correctCount: currentQuestion, // 現在までの正解数（モック）
+          correctCount: currentQuestion,
           averageResponseTime: (Date.now() - a.answeredAt) / 1000,
         }));
       setRankings(currentRankings);
@@ -186,200 +171,194 @@ export default function ControlPanelContent() {
     }
   }, [answers, currentQuestion]);
 
-  // 経過時間を計算
   const getElapsedTime = useCallback((answeredAt: number): string => {
     const elapsed = (Date.now() - answeredAt) / 1000;
     return elapsed.toFixed(1);
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8">
-      <div className="mx-auto max-w-7xl">
+    <div className="flex h-screen w-full items-center justify-center bg-[#fef7ff] p-4">
+      <div className="flex h-full w-full max-w-7xl flex-col gap-4 overflow-hidden">
         {/* ヘッダー */}
-        <div className="mb-8 rounded-2xl bg-gradient-to-r from-pink-600 to-rose-600 p-8 shadow-2xl">
-          <h1 className="text-4xl font-bold text-white">クイズコントロールパネル</h1>
-          <p className="mt-2 text-xl text-pink-100">Wedding Quiz Operator Dashboard</p>
-        </div>
-
-        {/* メインコントロールエリア */}
-        <div className="mb-8 grid gap-8 lg:grid-cols-2">
-          {/* セッション状態 */}
-          <div className="rounded-2xl bg-white p-8 shadow-xl">
-            <h2 className="mb-6 text-2xl font-bold text-gray-800">セッション状態</h2>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between rounded-lg bg-gray-50 p-4">
-                <span className="font-semibold text-gray-700">状態:</span>
-                <span
-                  className={`rounded-full px-4 py-2 text-sm font-bold ${
-                    sessionStatus === "waiting"
-                      ? "bg-yellow-200 text-yellow-800"
-                      : sessionStatus === "playing"
-                        ? "bg-green-200 text-green-800"
-                        : "bg-blue-200 text-blue-800"
-                  }`}
-                >
-                  {sessionStatus === "waiting"
-                    ? "待機中"
-                    : sessionStatus === "playing"
-                      ? "進行中"
-                      : "終了"}
-                </span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg bg-gray-50 p-4">
-                <span className="font-semibold text-gray-700">現在の問題:</span>
-                <span className="text-2xl font-bold text-pink-600">
-                  {currentQuestion} / {TOTAL_QUESTIONS}
-                </span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg bg-gray-50 p-4">
-                <span className="font-semibold text-gray-700">参加者数:</span>
-                <span className="text-2xl font-bold text-blue-600">{guestCount} 名</span>
-              </div>
-              <div className="flex items-center justify-between rounded-lg bg-gray-50 p-4">
-                <span className="font-semibold text-gray-700">回答数:</span>
-                <span className="text-2xl font-bold text-green-600">{answerCount} 件</span>
-              </div>
+        <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-[#6750a4] to-[#7f67be] px-6 py-4 shadow-md">
+          <div>
+            <h1 className="text-2xl font-bold text-white">クイズコントロール</h1>
+            <p className="text-sm text-[#e8def8]">Operator Dashboard</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 backdrop-blur">
+              <div
+                className={`h-2 w-2 rounded-full ${
+                  sessionStatus === "playing"
+                    ? "bg-[#4caf50] animate-pulse"
+                    : sessionStatus === "finished"
+                      ? "bg-[#2196f3]"
+                      : "bg-[#ff9800]"
+                }`}
+              />
+              <span className="text-sm font-medium text-white">
+                {sessionStatus === "waiting"
+                  ? "待機中"
+                  : sessionStatus === "playing"
+                    ? "進行中"
+                    : "終了"}
+              </span>
             </div>
           </div>
+        </div>
 
-          {/* コントロールボタン */}
-          <div className="rounded-2xl bg-white p-8 shadow-xl">
-            <h2 className="mb-6 text-2xl font-bold text-gray-800">操作</h2>
-            <div className="space-y-4">
-              {sessionStatus === "waiting" && (
+        {/* メインコンテンツエリア */}
+        <div className="grid flex-1 grid-cols-3 gap-4 overflow-hidden">
+          {/* 左カラム：セッション状態 */}
+          <div className="flex flex-col gap-4 overflow-auto">
+            <div className="rounded-xl bg-white p-4 shadow-sm">
+              <h2 className="mb-3 text-sm font-semibold text-[#1c1b1f]">セッション情報</h2>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between rounded-lg bg-[#f5f5f5] p-3">
+                  <span className="text-sm text-[#49454f]">問題</span>
+                  <span className="text-lg font-bold text-[#6750a4]">
+                    {currentQuestion} / {TOTAL_QUESTIONS}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg bg-[#f5f5f5] p-3">
+                  <span className="text-sm text-[#49454f]">参加者</span>
+                  <span className="text-lg font-bold text-[#2196f3]">{guestCount}</span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg bg-[#f5f5f5] p-3">
+                  <span className="text-sm text-[#49454f]">回答数</span>
+                  <span className="text-lg font-bold text-[#4caf50]">{answerCount}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 操作ボタン */}
+            <div className="rounded-xl bg-white p-4 shadow-sm">
+              <h2 className="mb-3 text-sm font-semibold text-[#1c1b1f]">操作</h2>
+              <div className="space-y-2">
+                {sessionStatus === "waiting" && (
+                  <button
+                    type="button"
+                    onClick={handleStart}
+                    className="w-full rounded-full bg-[#6750a4] px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#7f67be] hover:shadow-lg active:scale-95"
+                  >
+                    クイズを開始
+                  </button>
+                )}
+
+                {sessionStatus === "playing" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleShowResults}
+                      className="w-full rounded-full bg-[#2196f3] px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#42a5f5] active:scale-95"
+                    >
+                      結果を表示
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNextQuestion}
+                      className="w-full rounded-full bg-[#6750a4] px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#7f67be] hover:shadow-lg active:scale-95"
+                    >
+                      {currentQuestion < TOTAL_QUESTIONS ? "次の問題へ" : "最終結果"}
+                    </button>
+                  </>
+                )}
+
                 <button
                   type="button"
-                  onClick={handleStart}
-                  className="w-full rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 px-8 py-6 text-2xl font-bold text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl"
+                  onClick={handleReset}
+                  className="w-full rounded-full border border-[#79747e] bg-white px-6 py-3 text-sm font-semibold text-[#6750a4] transition-all hover:bg-[#f5f5f5] active:scale-95"
                 >
-                  クイズを開始
+                  リセット
                 </button>
-              )}
+              </div>
+            </div>
+          </div>
 
+          {/* 中央カラム：リアルタイム回答 */}
+          <div className="overflow-auto rounded-xl bg-white p-4 shadow-sm">
+            <h2 className="mb-3 text-sm font-semibold text-[#1c1b1f]">
+              リアルタイム回答
               {sessionStatus === "playing" && (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleShowResults}
-                    className="w-full rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 px-8 py-4 text-xl font-bold text-white shadow-lg transition-all hover:scale-105"
-                  >
-                    結果を表示
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleNextQuestion}
-                    className="w-full rounded-xl bg-gradient-to-r from-purple-500 to-pink-600 px-8 py-6 text-2xl font-bold text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl"
-                  >
-                    {currentQuestion < TOTAL_QUESTIONS ? "次の問題へ →" : "最終結果を表示"}
-                  </button>
-                </>
+                <span className="ml-2 text-xs text-[#79747e]">（第{currentQuestion}問）</span>
               )}
-
-              <button
-                type="button"
-                onClick={handleReset}
-                className="w-full rounded-xl border-2 border-gray-300 bg-white px-8 py-4 text-xl font-bold text-gray-700 shadow-md transition-all hover:bg-gray-50"
-              >
-                セッションをリセット
-              </button>
-            </div>
-
-            {/* 注意事項 */}
-            <div className="mt-6 rounded-lg bg-amber-50 p-4">
-              <h3 className="mb-2 font-bold text-amber-800">操作ガイド</h3>
-              <ul className="space-y-1 text-sm text-amber-700">
-                <li>1. 「クイズを開始」で第1問を表示</li>
-                <li>2. 「結果を表示」で現在のランキングを確認</li>
-                <li>3. 「次の問題へ」で次の問題に進む</li>
-                <li>4. 第{TOTAL_QUESTIONS}問終了後、最終結果が表示されます</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-
-        {/* リアルタイム回答モニター */}
-        {sessionStatus === "playing" && (
-          <div className="mb-8 rounded-2xl bg-white p-8 shadow-xl">
-            <h2 className="mb-6 text-2xl font-bold text-gray-800">
-              リアルタイム回答モニター（第{currentQuestion}問）
             </h2>
-            <div className="space-y-3">
-              {answers.length === 0 ? (
-                <p className="text-center text-gray-500">回答待ち...</p>
-              ) : (
-                answers.map((answer) => (
-                  <div
-                    key={answer.guestId}
-                    className={`flex items-center justify-between rounded-lg p-4 ${
-                      answer.isCorrect
-                        ? "border-2 border-green-300 bg-green-50"
-                        : "border-2 border-red-300 bg-red-50"
-                    }`}
-                  >
-                    <div className="flex items-center gap-4">
-                      <span
-                        className={`rounded-full px-3 py-1 text-sm font-bold ${
-                          answer.isCorrect
-                            ? "bg-green-200 text-green-800"
-                            : "bg-red-200 text-red-800"
-                        }`}
-                      >
-                        {answer.isCorrect ? "正解" : "不正解"}
-                      </span>
-                      <span className="text-lg font-semibold text-gray-800">{answer.nickname}</span>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm text-gray-600">
-                        選択: {CHOICE_LABELS[answer.choice]}
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {getElapsedTime(answer.answeredAt)}秒
-                      </div>
-                    </div>
-                  </div>
-                ))
+            <div className="space-y-2">
+              {sessionStatus === "playing" && answers.length === 0 && (
+                <p className="py-4 text-center text-sm text-[#79747e]">回答待ち...</p>
               )}
-            </div>
-          </div>
-        )}
-
-        {/* ランキング表示 */}
-        {rankings.length > 0 && (
-          <div className="rounded-2xl bg-gradient-to-br from-yellow-50 to-pink-50 p-8 shadow-xl">
-            <h2 className="mb-6 text-3xl font-bold text-gray-800">
-              {sessionStatus === "finished" ? "最終ランキング TOP3" : "現在のランキング TOP3"}
-            </h2>
-            <div className="space-y-4">
-              {rankings.map((entry) => (
+              {answers.map((answer) => (
                 <div
-                  key={entry.rank}
-                  className={`flex items-center justify-between rounded-xl p-6 shadow-lg ${
-                    entry.rank === 1
-                      ? "bg-gradient-to-r from-yellow-300 to-yellow-400"
-                      : entry.rank === 2
-                        ? "bg-gradient-to-r from-gray-300 to-gray-400"
-                        : "bg-gradient-to-r from-orange-300 to-orange-400"
+                  key={answer.guestId}
+                  className={`flex items-center justify-between rounded-lg border p-3 ${
+                    answer.isCorrect
+                      ? "border-[#4caf50] bg-[#e8f5e9]"
+                      : "border-[#f44336] bg-[#ffebee]"
                   }`}
                 >
-                  <div className="flex items-center gap-6">
-                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-white shadow-md">
-                      <span className="text-3xl font-bold text-gray-800">{entry.rank}</span>
-                    </div>
-                    <span className="text-3xl font-bold text-gray-900">{entry.nickname}</span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                        answer.isCorrect ? "bg-[#4caf50] text-white" : "bg-[#f44336] text-white"
+                      }`}
+                    >
+                      {answer.isCorrect ? "正解" : "不正解"}
+                    </span>
+                    <span className="text-sm font-medium text-[#1c1b1f]">{answer.nickname}</span>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold text-gray-900">
-                      正解数: {entry.correctCount}
-                    </div>
-                    <div className="text-lg text-gray-700">
-                      平均: {entry.averageResponseTime.toFixed(1)}秒
+                    <div className="text-xs text-[#49454f]">{CHOICE_LABELS[answer.choice]}</div>
+                    <div className="text-xs text-[#79747e]">
+                      {getElapsedTime(answer.answeredAt)}秒
                     </div>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-        )}
+
+          {/* 右カラム：ランキング */}
+          <div className="overflow-auto rounded-xl bg-white p-4 shadow-sm">
+            <h2 className="mb-3 text-sm font-semibold text-[#1c1b1f]">ランキング TOP3</h2>
+            {rankings.length === 0 ? (
+              <p className="py-4 text-center text-sm text-[#79747e]">結果なし</p>
+            ) : (
+              <div className="space-y-2">
+                {rankings.map((entry) => (
+                  <div
+                    key={entry.rank}
+                    className={`flex items-center gap-3 rounded-lg border p-3 ${
+                      entry.rank === 1
+                        ? "border-[#ffd700] bg-gradient-to-r from-[#fff9e6] to-[#fffaed]"
+                        : entry.rank === 2
+                          ? "border-[#c0c0c0] bg-gradient-to-r from-[#f5f5f5] to-[#fafafa]"
+                          : "border-[#cd7f32] bg-gradient-to-r from-[#fff4e6] to-[#fff7ed]"
+                    }`}
+                  >
+                    <div
+                      className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full font-bold text-white ${
+                        entry.rank === 1
+                          ? "bg-[#ffd700]"
+                          : entry.rank === 2
+                            ? "bg-[#c0c0c0]"
+                            : "bg-[#cd7f32]"
+                      }`}
+                    >
+                      {entry.rank}
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm font-semibold text-[#1c1b1f]">{entry.nickname}</div>
+                      <div className="text-xs text-[#49454f]">
+                        正解: {entry.correctCount} 問 ・ 平均:{" "}
+                        {entry.averageResponseTime.toFixed(1)}秒
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
