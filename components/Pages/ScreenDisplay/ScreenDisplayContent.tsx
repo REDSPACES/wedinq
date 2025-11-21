@@ -133,13 +133,6 @@ export default function ScreenDisplayContent() {
                 ← 前へ
               </button>
 
-              {/* スライド番号表示 */}
-              <div className="rounded-2xl bg-white/90 px-8 py-4 shadow-lg backdrop-blur-sm">
-                <span className="text-3xl font-bold text-pink-900">
-                  {currentSlideNumber} / {SLIDE_FILENAMES.length}
-                </span>
-              </div>
-
               {/* 次へボタン（最後のスライドでは「最初に戻る」） */}
               {currentSlideIndex < SLIDE_FILENAMES.length - 1 ? (
                 <button
