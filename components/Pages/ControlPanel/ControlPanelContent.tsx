@@ -1,68 +1,70 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CHOICE_LABELS, RANKING_DISPLAY_COUNT, TOTAL_QUESTIONS } from "../../../lib/constants/quiz";
+import { getCorrectAnswer } from "../../../lib/constants/quiz-questions";
+import {
+  createQuizSession,
+  updateSessionStatus,
+} from "../../../lib/firebase/quiz-service";
+import { useGuestCount } from "../../../lib/hooks/use-guest-count";
+import { useQuizAnswers } from "../../../lib/hooks/use-quiz-answers";
+import { useQuizSession } from "../../../lib/hooks/use-quiz-session";
+import { CURRENT_SESSION_ID } from "../../../lib/utils/session-manager";
 import type { GuestAnswer, RankingEntry, SessionStatus } from "../../../types/quiz";
 
 export default function ControlPanelContent() {
-  const [sessionStatus, setSessionStatus] = useState<SessionStatus>("waiting");
-  const [currentQuestion, setCurrentQuestion] = useState(1);
-  const [guestCount, setGuestCount] = useState(0);
-  const [answerCount, setAnswerCount] = useState(0);
-  const [answers, setAnswers] = useState<GuestAnswer[]>([]);
+  // Firebaseからセッション情報を取得
+  const { session, loading: sessionLoading } = useQuizSession(CURRENT_SESSION_ID);
+  const { allAnswers, currentAnswers } = useQuizAnswers(
+    CURRENT_SESSION_ID,
+    session?.currentQuestion,
+  );
+  const { guestCount } = useGuestCount(CURRENT_SESSION_ID);
+
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
-  const [allAnswers, setAllAnswers] = useState<GuestAnswer[]>([]); // 全問題の回答を保存
+  const [questionStartTimes, setQuestionStartTimes] = useState<Map<number, number>>(new Map());
 
-  // モックデータ生成（useEffectの無限ループを防ぐためにuseMemoを使用）
-  const mockAnswersData = useMemo(() => {
-    if (sessionStatus !== "playing") return [];
+  // セッション状態をローカルステートに反映
+  const sessionStatus: SessionStatus = session?.status || "waiting";
+  const currentQuestion = session?.currentQuestion || 1;
 
-    const baseTime = Date.now();
-    return [
-      {
-        guestId: "1",
-        nickname: "太郎さん",
-        questionNumber: currentQuestion,
-        choice: 0,
-        answeredAt: baseTime - 2300,
-        isCorrect: true,
-      },
-      {
-        guestId: "2",
-        nickname: "花子さん",
-        questionNumber: currentQuestion,
-        choice: 0,
-        answeredAt: baseTime - 3100,
-        isCorrect: true,
-      },
-      {
-        guestId: "3",
-        nickname: "次郎さん",
-        questionNumber: currentQuestion,
-        choice: 1,
-        answeredAt: baseTime - 2800,
-        isCorrect: Math.random() > 0.3, // ランダムに正解/不正解
-      },
-    ];
+  // セッション初期化
+  useEffect(() => {
+    const initSession = async () => {
+      if (!sessionLoading && !session) {
+        try {
+          await createQuizSession(CURRENT_SESSION_ID);
+          console.log("Quiz session initialized:", CURRENT_SESSION_ID);
+        } catch (error) {
+          console.error("Failed to initialize session:", error);
+        }
+      }
+    };
+
+    initSession();
+  }, [session, sessionLoading]);
+
+  // 問題開始時刻を記録
+  useEffect(() => {
+    if (sessionStatus === "playing") {
+      setQuestionStartTimes((prev) => {
+        if (!prev.has(currentQuestion)) {
+          const newMap = new Map(prev);
+          newMap.set(currentQuestion, Date.now());
+          return newMap;
+        }
+        return prev;
+      });
+    }
   }, [sessionStatus, currentQuestion]);
 
-  // モックデータをセット（依存関係を最小限に）
-  useEffect(() => {
-    if (sessionStatus === "playing" && mockAnswersData.length > 0) {
-      setAnswers(mockAnswersData);
-      setGuestCount(Math.floor(Math.random() * 10) + 20); // 20-30名
-      setAnswerCount(Math.floor(Math.random() * 10) + 15); // 15-25件
-    }
-  }, [sessionStatus, mockAnswersData]);
-
   // セッション開始
-  const handleStart = useCallback(() => {
+  const handleStart = useCallback(async () => {
     try {
-      setSessionStatus("playing");
-      setCurrentQuestion(1);
-      setAnswers([]);
+      await updateSessionStatus(CURRENT_SESSION_ID, "playing", 1);
       setRankings([]);
-      setAllAnswers([]);
+      setQuestionStartTimes(new Map());
       console.log("Quiz session started");
     } catch (error) {
       console.error("Failed to start quiz session:", error);
@@ -71,93 +73,106 @@ export default function ControlPanelContent() {
   }, []);
 
   // 最終ランキング計算（全問題の回答から計算）
-  const calculateFinalRankings = useCallback((allAnswersData: GuestAnswer[]): RankingEntry[] => {
-    // ゲストごとに集計
-    const guestStats = new Map<
-      string,
-      { nickname: string; correctCount: number; totalTime: number }
-    >();
+  const calculateFinalRankings = useCallback(
+    (allAnswersData: GuestAnswer[]): RankingEntry[] => {
+      // ゲストごとに集計
+      const guestStats = new Map<
+        string,
+        { nickname: string; correctCount: number; totalTime: number }
+      >();
 
-    for (const answer of allAnswersData) {
-      if (!answer.isCorrect) continue;
+      for (const answer of allAnswersData) {
+        if (!answer.isCorrect) continue;
 
-      const existing = guestStats.get(answer.guestId);
-      const responseTime = answer.answeredAt; // 実際には問題開始時刻からの経過時間
+        const existing = guestStats.get(answer.guestId);
+        const questionStartTime = questionStartTimes.get(answer.questionNumber) || answer.answeredAt;
+        const responseTime = answer.answeredAt - questionStartTime;
 
-      if (existing) {
-        existing.correctCount++;
-        existing.totalTime += responseTime;
-      } else {
-        guestStats.set(answer.guestId, {
-          nickname: answer.nickname,
-          correctCount: 1,
-          totalTime: responseTime,
-        });
-      }
-    }
-
-    // ランキング作成（正解数 > 平均回答時間の順）
-    const rankingList = Array.from(guestStats.entries())
-      .map(([guestId, stats]) => ({
-        guestId,
-        nickname: stats.nickname,
-        correctCount: stats.correctCount,
-        averageResponseTime: stats.totalTime / stats.correctCount / 1000, // 秒に変換
-      }))
-      .sort((a, b) => {
-        // 正解数が多い方が上位
-        if (a.correctCount !== b.correctCount) {
-          return b.correctCount - a.correctCount;
+        if (existing) {
+          existing.correctCount++;
+          existing.totalTime += responseTime;
+        } else {
+          guestStats.set(answer.guestId, {
+            nickname: answer.nickname,
+            correctCount: 1,
+            totalTime: responseTime,
+          });
         }
-        // 正解数が同じ場合は平均回答時間が短い方が上位
-        return a.averageResponseTime - b.averageResponseTime;
-      })
-      .slice(0, RANKING_DISPLAY_COUNT)
-      .map((entry, index) => ({
-        rank: index + 1,
-        nickname: entry.nickname,
-        correctCount: entry.correctCount,
-        averageResponseTime: entry.averageResponseTime,
-      }));
+      }
 
-    return rankingList;
-  }, []);
+      // ランキング作成（正解数 > 平均回答時間の順）
+      const rankingList = Array.from(guestStats.entries())
+        .map(([, stats]) => ({
+          rank: 0,
+          nickname: stats.nickname,
+          correctCount: stats.correctCount,
+          averageResponseTime: stats.totalTime / stats.correctCount / 1000, // 秒に変換
+        }))
+        .sort((a, b) => {
+          // 正解数が多い方が上位
+          if (a.correctCount !== b.correctCount) {
+            return b.correctCount - a.correctCount;
+          }
+          // 正解数が同じ場合は平均回答時間が短い方が上位
+          return a.averageResponseTime - b.averageResponseTime;
+        })
+        .slice(0, RANKING_DISPLAY_COUNT)
+        .map((entry, index) => ({
+          ...entry,
+          rank: index + 1,
+        }));
+
+      return rankingList;
+    },
+    [questionStartTimes],
+  );
+
+  // 現在の問題ランキング計算
+  const calculateCurrentRankings = useCallback(
+    (answersData: GuestAnswer[]): RankingEntry[] => {
+      const questionStartTime = questionStartTimes.get(currentQuestion) || Date.now();
+
+      return answersData
+        .filter((a) => a.isCorrect)
+        .sort((a, b) => a.answeredAt - b.answeredAt)
+        .slice(0, RANKING_DISPLAY_COUNT)
+        .map((a, index) => ({
+          rank: index + 1,
+          nickname: a.nickname,
+          correctCount: allAnswers.filter((ans) => ans.guestId === a.guestId && ans.isCorrect)
+            .length,
+          averageResponseTime: (a.answeredAt - questionStartTime) / 1000,
+        }));
+    },
+    [questionStartTimes, currentQuestion, allAnswers],
+  );
 
   // 次の問題へ
-  const handleNextQuestion = useCallback(() => {
+  const handleNextQuestion = useCallback(async () => {
     try {
-      // 現在の回答を全回答リストに追加
-      setAllAnswers((prev) => [...prev, ...answers]);
-
       if (currentQuestion < TOTAL_QUESTIONS) {
-        setCurrentQuestion((prev) => prev + 1);
-        setAnswers([]);
+        await updateSessionStatus(CURRENT_SESSION_ID, "playing", currentQuestion + 1);
         setRankings([]);
         console.log(`Moving to question ${currentQuestion + 1}`);
       } else {
         // 最終結果を計算
-        const allAnswersWithCurrent = [...allAnswers, ...answers];
-        const finalRankings = calculateFinalRankings(allAnswersWithCurrent);
+        const finalRankings = calculateFinalRankings(allAnswers);
         setRankings(finalRankings);
-        setSessionStatus("finished");
+        await updateSessionStatus(CURRENT_SESSION_ID, "finished");
         console.log("Quiz session finished", { finalRankings });
       }
     } catch (error) {
       console.error("Failed to proceed to next question:", error);
       alert("次の問題への移動に失敗しました。");
     }
-  }, [currentQuestion, answers, allAnswers, calculateFinalRankings]);
+  }, [currentQuestion, allAnswers, calculateFinalRankings]);
 
   // セッションリセット
-  const handleReset = useCallback(() => {
+  const handleReset = useCallback(async () => {
     try {
-      setSessionStatus("waiting");
-      setCurrentQuestion(1);
-      setGuestCount(0);
-      setAnswerCount(0);
-      setAnswers([]);
+      await updateSessionStatus(CURRENT_SESSION_ID, "waiting", 1);
       setRankings([]);
-      setAllAnswers([]);
+      setQuestionStartTimes(new Map());
       console.log("Quiz session reset");
     } catch (error) {
       console.error("Failed to reset quiz session:", error);
@@ -168,29 +183,35 @@ export default function ControlPanelContent() {
   // 現在の問題の結果を表示
   const handleShowResults = useCallback(() => {
     try {
-      const currentRankings: RankingEntry[] = answers
-        .filter((a) => a.isCorrect)
-        .sort((a, b) => a.answeredAt - b.answeredAt) // 回答時刻が早い順
-        .slice(0, RANKING_DISPLAY_COUNT)
-        .map((a, index) => ({
-          rank: index + 1,
-          nickname: a.nickname,
-          correctCount: currentQuestion, // 現在までの正解数（モック）
-          averageResponseTime: (Date.now() - a.answeredAt) / 1000,
-        }));
+      const currentRankings = calculateCurrentRankings(currentAnswers);
       setRankings(currentRankings);
       console.log("Current question results:", currentRankings);
     } catch (error) {
       console.error("Failed to show results:", error);
       alert("結果の表示に失敗しました。");
     }
-  }, [answers, currentQuestion]);
+  }, [currentAnswers, calculateCurrentRankings]);
 
   // 経過時間を計算
-  const getElapsedTime = useCallback((answeredAt: number): string => {
-    const elapsed = (Date.now() - answeredAt) / 1000;
-    return elapsed.toFixed(1);
-  }, []);
+  const getElapsedTime = useCallback(
+    (answeredAt: number): string => {
+      const questionStartTime = questionStartTimes.get(currentQuestion) || Date.now();
+      const elapsed = (answeredAt - questionStartTime) / 1000;
+      return elapsed.toFixed(1);
+    },
+    [questionStartTimes, currentQuestion],
+  );
+
+  if (sessionLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="text-center">
+          <div className="mb-4 h-16 w-16 animate-spin rounded-full border-4 border-pink-200 border-t-pink-600" />
+          <p className="text-white">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8">
@@ -199,6 +220,7 @@ export default function ControlPanelContent() {
         <div className="mb-8 rounded-2xl bg-gradient-to-r from-pink-600 to-rose-600 p-8 shadow-2xl">
           <h1 className="text-4xl font-bold text-white">クイズコントロールパネル</h1>
           <p className="mt-2 text-xl text-pink-100">Wedding Quiz Operator Dashboard</p>
+          <p className="mt-1 text-sm text-pink-200">Session ID: {CURRENT_SESSION_ID}</p>
         </div>
 
         {/* メインコントロールエリア */}
@@ -237,7 +259,9 @@ export default function ControlPanelContent() {
               </div>
               <div className="flex items-center justify-between rounded-lg bg-gray-50 p-4">
                 <span className="font-semibold text-gray-700">回答数:</span>
-                <span className="text-2xl font-bold text-green-600">{answerCount} 件</span>
+                <span className="text-2xl font-bold text-green-600">
+                  {currentAnswers.length} 件
+                </span>
               </div>
             </div>
           </div>
@@ -304,12 +328,12 @@ export default function ControlPanelContent() {
               リアルタイム回答モニター（第{currentQuestion}問）
             </h2>
             <div className="space-y-3">
-              {answers.length === 0 ? (
+              {currentAnswers.length === 0 ? (
                 <p className="text-center text-gray-500">回答待ち...</p>
               ) : (
-                answers.map((answer) => (
+                currentAnswers.map((answer) => (
                   <div
-                    key={answer.guestId}
+                    key={`${answer.guestId}_${answer.questionNumber}`}
                     className={`flex items-center justify-between rounded-lg p-4 ${
                       answer.isCorrect
                         ? "border-2 border-green-300 bg-green-50"
@@ -332,9 +356,7 @@ export default function ControlPanelContent() {
                       <div className="text-sm text-gray-600">
                         選択: {CHOICE_LABELS[answer.choice]}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {getElapsedTime(answer.answeredAt)}秒
-                      </div>
+                      <div className="text-xs text-gray-500">{getElapsedTime(answer.answeredAt)}秒</div>
                     </div>
                   </div>
                 ))

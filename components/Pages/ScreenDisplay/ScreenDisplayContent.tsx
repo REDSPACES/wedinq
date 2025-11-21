@@ -3,19 +3,58 @@
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import {
+  RANKING_DISPLAY_COUNT,
   TIME_LIMIT_SECONDS,
   TIMER_INTERVAL_MS,
   TOTAL_QUESTIONS,
 } from "../../../lib/constants/quiz";
+import { useQuizAnswers } from "../../../lib/hooks/use-quiz-answers";
+import { useQuizSession } from "../../../lib/hooks/use-quiz-session";
+import { CURRENT_SESSION_ID } from "../../../lib/utils/session-manager";
 import { getSlideImagePath } from "../../../lib/utils/quiz-images";
-import type { RankingEntry, ScreenDisplayState } from "../../../types/quiz";
+import type { GuestAnswer, RankingEntry, ScreenDisplayState } from "../../../types/quiz";
 
 export default function ScreenDisplayContent() {
   const [state, setState] = useState<ScreenDisplayState>("standby");
-  const [currentQuestion, setCurrentQuestion] = useState(1);
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT_SECONDS);
+  const [showResults, setShowResults] = useState(false);
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
   const [imageError, setImageError] = useState(false);
+  const [questionStartTimes, setQuestionStartTimes] = useState<Map<number, number>>(new Map());
+
+  // Firebaseからセッション情報と回答を取得
+  const { session, loading: sessionLoading } = useQuizSession(CURRENT_SESSION_ID);
+  const { allAnswers } = useQuizAnswers(CURRENT_SESSION_ID);
+
+  const currentQuestion = session?.currentQuestion || 1;
+
+  // セッション状態の変更を監視
+  useEffect(() => {
+    if (!session) return;
+
+    if (session.status === "waiting") {
+      setState("standby");
+      setShowResults(false);
+    } else if (session.status === "playing") {
+      setState("question_display");
+      setTimeLeft(TIME_LIMIT_SECONDS);
+      setShowResults(false);
+
+      // 問題開始時刻を記録
+      setQuestionStartTimes((prev) => {
+        if (!prev.has(currentQuestion)) {
+          const newMap = new Map(prev);
+          newMap.set(currentQuestion, Date.now());
+          return newMap;
+        }
+        return prev;
+      });
+    } else if (session.status === "finished") {
+      setState("finished");
+      setShowResults(true);
+      calculateFinalRankings();
+    }
+  }, [session]);
 
   // タイマーのカウントダウン
   useEffect(() => {
@@ -30,53 +69,80 @@ export default function ScreenDisplayContent() {
     return () => clearTimeout(timer);
   }, [state, timeLeft]);
 
-  // モックランキングデータを生成（実際の実装ではSupabaseから取得）
-  const generateMockRankings = useCallback((): RankingEntry[] => {
-    return [
-      { rank: 1, nickname: "太郎さん", correctCount: currentQuestion, averageResponseTime: 2.3 },
-      { rank: 2, nickname: "花子さん", correctCount: currentQuestion, averageResponseTime: 3.1 },
-      {
-        rank: 3,
-        nickname: "次郎さん",
-        correctCount: currentQuestion - 1,
-        averageResponseTime: 2.8,
-      },
-    ];
-  }, [currentQuestion]);
+  // ランキング計算
+  const calculateFinalRankings = useCallback(() => {
+    // ゲストごとに集計
+    const guestStats = new Map<
+      string,
+      { nickname: string; correctCount: number; totalTime: number }
+    >();
 
-  // 次へ進む
-  const handleNext = useCallback(() => {
-    setImageError(false);
+    for (const answer of allAnswers) {
+      if (!answer.isCorrect) continue;
 
-    if (state === "standby") {
-      setState("question_display");
-      setCurrentQuestion(1);
-      setTimeLeft(TIME_LIMIT_SECONDS);
-    } else if (state === "question_display") {
-      setState("result_display");
-      setRankings(generateMockRankings());
-    } else if (state === "result_display") {
-      if (currentQuestion < TOTAL_QUESTIONS) {
-        setState("question_display");
-        setCurrentQuestion((prev) => prev + 1);
-        setTimeLeft(TIME_LIMIT_SECONDS);
+      const existing = guestStats.get(answer.guestId);
+      const questionStartTime = questionStartTimes.get(answer.questionNumber) || answer.answeredAt;
+      const responseTime = answer.answeredAt - questionStartTime;
+
+      if (existing) {
+        existing.correctCount++;
+        existing.totalTime += responseTime;
       } else {
-        setState("finished");
+        guestStats.set(answer.guestId, {
+          nickname: answer.nickname,
+          correctCount: 1,
+          totalTime: responseTime,
+        });
       }
-    } else if (state === "finished") {
-      // リセット
-      setState("standby");
-      setCurrentQuestion(1);
-      setTimeLeft(TIME_LIMIT_SECONDS);
-      setRankings([]);
     }
-  }, [state, currentQuestion, generateMockRankings]);
+
+    // ランキング作成
+    const rankingList = Array.from(guestStats.entries())
+      .map(([, stats]) => ({
+        rank: 0,
+        nickname: stats.nickname,
+        correctCount: stats.correctCount,
+        averageResponseTime: stats.totalTime / stats.correctCount / 1000,
+      }))
+      .sort((a, b) => {
+        if (a.correctCount !== b.correctCount) {
+          return b.correctCount - a.correctCount;
+        }
+        return a.averageResponseTime - b.averageResponseTime;
+      })
+      .slice(0, RANKING_DISPLAY_COUNT)
+      .map((entry, index) => ({
+        ...entry,
+        rank: index + 1,
+      }));
+
+    setRankings(rankingList);
+  }, [allAnswers, questionStartTimes]);
+
+  // 結果表示トグル
+  const handleToggleResults = useCallback(() => {
+    setShowResults((prev) => !prev);
+    if (!showResults) {
+      calculateFinalRankings();
+    }
+  }, [showResults, calculateFinalRankings]);
 
   // 画像読み込みエラーハンドラー
   const handleImageError = useCallback(() => {
     setImageError(true);
     console.error(`Failed to load image for question ${currentQuestion}`);
   }, [currentQuestion]);
+
+  if (sessionLoading) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-gray-900">
+        <div className="text-center">
+          <div className="mb-4 h-16 w-16 animate-spin rounded-full border-4 border-pink-200 border-t-pink-600" />
+          <p className="text-white">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-gray-900">
@@ -111,13 +177,6 @@ export default function ScreenDisplayContent() {
                   </div>
                 </div>
               )}
-              <button
-                type="button"
-                onClick={handleNext}
-                className="absolute bottom-12 right-12 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-16 py-6 text-3xl font-bold text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl"
-              >
-                クイズを開始
-              </button>
             </div>
           )}
 
@@ -158,20 +217,11 @@ export default function ScreenDisplayContent() {
                   </div>
                 </div>
               )}
-
-              {/* 次へボタン */}
-              <button
-                type="button"
-                onClick={handleNext}
-                className="absolute bottom-12 right-12 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-12 py-5 text-2xl font-bold text-white shadow-lg transition-all hover:scale-105"
-              >
-                結果を表示 →
-              </button>
             </div>
           )}
 
-          {/* 結果表示画面 */}
-          {state === "result_display" && (
+          {/* 結果表示画面 (結果を表示ボタンが押されたとき) */}
+          {showResults && rankings.length > 0 && state !== "standby" && (
             <div className="relative h-full w-full">
               <Image
                 src={getSlideImagePath("resultname")}
@@ -223,14 +273,6 @@ export default function ScreenDisplayContent() {
                   </div>
                 </div>
               )}
-
-              <button
-                type="button"
-                onClick={handleNext}
-                className="absolute bottom-12 right-12 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-16 py-6 text-3xl font-bold text-white shadow-lg transition-all hover:scale-105"
-              >
-                {currentQuestion < TOTAL_QUESTIONS ? "次の問題へ →" : "最終結果を表示 →"}
-              </button>
             </div>
           )}
 
@@ -261,14 +303,6 @@ export default function ScreenDisplayContent() {
                   </p>
                 </div>
               )}
-
-              <button
-                type="button"
-                onClick={handleNext}
-                className="absolute bottom-12 right-12 rounded-full bg-gradient-to-r from-gray-500 to-gray-600 px-12 py-5 text-2xl font-bold text-white shadow-lg transition-all hover:scale-105"
-              >
-                最初に戻る
-              </button>
             </div>
           )}
         </div>

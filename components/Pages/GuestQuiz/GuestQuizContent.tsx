@@ -2,26 +2,60 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CHOICE_LABELS, TOTAL_QUESTIONS } from "../../../lib/constants/quiz";
+import { getCorrectAnswer } from "../../../lib/constants/quiz-questions";
+import { registerGuest, submitAnswer } from "../../../lib/firebase/quiz-service";
+import { useQuizSession } from "../../../lib/hooks/use-quiz-session";
+import {
+  CURRENT_SESSION_ID,
+  getGuestNickname,
+  getOrCreateGuestId,
+  saveGuestNickname,
+} from "../../../lib/utils/session-manager";
 import type { GuestScreenState } from "../../../types/quiz";
 
 export default function GuestQuizContent() {
   const [screenState, setScreenState] = useState<GuestScreenState>("intro");
   const [nickname, setNickname] = useState("");
+  const [guestId, setGuestId] = useState<string>("");
   const [currentQuestion, setCurrentQuestion] = useState(1);
   const [selectedChoice, setSelectedChoice] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasAnswered, setHasAnswered] = useState(false);
 
-  // モック：セッション状態（実際はSupabase Realtimeから取得）
-  const [sessionStatus, setSessionStatus] = useState<"waiting" | "playing" | "finished">("waiting");
-  const [sessionCurrentQuestion, setSessionCurrentQuestion] = useState(1);
+  // Firebaseからセッション状態を取得
+  const { session, loading: sessionLoading } = useQuizSession(CURRENT_SESSION_ID);
 
-  // セッション状態の変更を監視（実際はSupabase Realtimeで実装）
+  // 初期化：保存済みニックネームとゲストIDを取得
   useEffect(() => {
-    if (screenState === "waiting_for_question" && sessionStatus === "playing") {
-      setScreenState("question_display");
-      setCurrentQuestion(sessionCurrentQuestion);
+    const savedNickname = getGuestNickname();
+    if (savedNickname) {
+      setNickname(savedNickname);
     }
-  }, [screenState, sessionStatus, sessionCurrentQuestion]);
+    setGuestId(getOrCreateGuestId());
+  }, []);
+
+  // セッション状態の変更を監視
+  useEffect(() => {
+    if (!session) return;
+
+    // クイズが開始されたら問題表示画面へ
+    if (
+      session.status === "playing" &&
+      (screenState === "waiting_for_question" || screenState === "waiting_next")
+    ) {
+      if (session.currentQuestion !== currentQuestion) {
+        setCurrentQuestion(session.currentQuestion);
+        setSelectedChoice(null);
+        setHasAnswered(false);
+        setScreenState("question_display");
+      }
+    }
+
+    // クイズが終了したら終了画面へ
+    if (session.status === "finished" && screenState !== "finished") {
+      setScreenState("finished");
+    }
+  }, [session, screenState, currentQuestion]);
 
   // イントロ画面から入力画面へ
   const handleStartClick = useCallback(() => {
@@ -42,24 +76,22 @@ export default function GuestQuizContent() {
 
     try {
       setIsSubmitting(true);
-      // TODO: Supabaseにニックネームを登録
-      console.log("Registering nickname:", nickname);
 
-      // 登録完了後、準備中画面へ
+      // Firestoreにニックネームを登録
+      await registerGuest(CURRENT_SESSION_ID, guestId, nickname.trim());
+      saveGuestNickname(nickname.trim());
+
+      console.log("Guest registered:", { guestId, nickname: nickname.trim() });
+
+      // 登録完了後、待機画面へ
       setScreenState("waiting_for_question");
-
-      // モック：3秒後にクイズ開始（実際はRealtimeで通知を受け取る）
-      setTimeout(() => {
-        setSessionStatus("playing");
-        setSessionCurrentQuestion(1);
-      }, 3000);
     } catch (error) {
       console.error("Failed to register nickname:", error);
       alert("登録に失敗しました。もう一度お試しください。");
     } finally {
       setIsSubmitting(false);
     }
-  }, [nickname]);
+  }, [nickname, guestId]);
 
   // 回答を送信
   const handleAnswerSubmit = useCallback(async () => {
@@ -68,37 +100,54 @@ export default function GuestQuizContent() {
       return;
     }
 
+    if (hasAnswered) {
+      alert("すでに回答済みです");
+      return;
+    }
+
     try {
       setIsSubmitting(true);
-      // TODO: Supabaseに回答を送信
-      console.log("Submitting answer:", {
-        question: currentQuestion,
+
+      const correctAnswer = getCorrectAnswer(currentQuestion);
+      const isCorrect = selectedChoice === correctAnswer;
+
+      // Firestoreに回答を送信
+      await submitAnswer(CURRENT_SESSION_ID, {
+        guestId,
+        nickname,
+        questionNumber: currentQuestion,
         choice: selectedChoice,
         answeredAt: Date.now(),
+        isCorrect,
+      });
+
+      console.log("Answer submitted:", {
+        question: currentQuestion,
+        choice: selectedChoice,
+        isCorrect,
       });
 
       // 回答送信後、次の問題を待つ
+      setHasAnswered(true);
       setScreenState("waiting_next");
-      setSelectedChoice(null);
-
-      // モック：2秒後に次の問題へ（実際はRealtimeで通知を受け取る）
-      setTimeout(() => {
-        if (currentQuestion < TOTAL_QUESTIONS) {
-          setCurrentQuestion((prev) => prev + 1);
-          setSessionCurrentQuestion((prev) => prev + 1);
-          setScreenState("question_display");
-        } else {
-          setSessionStatus("finished");
-          setScreenState("finished");
-        }
-      }, 2000);
     } catch (error) {
       console.error("Failed to submit answer:", error);
       alert("回答の送信に失敗しました。");
     } finally {
       setIsSubmitting(false);
     }
-  }, [selectedChoice, currentQuestion]);
+  }, [selectedChoice, currentQuestion, guestId, nickname, hasAnswered]);
+
+  if (sessionLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-pink-50 via-white to-rose-50">
+        <div className="text-center">
+          <div className="mb-4 h-16 w-16 animate-spin rounded-full border-4 border-pink-200 border-t-pink-600" />
+          <p className="text-gray-600">読み込み中...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-pink-50 via-white to-rose-50 p-4">
