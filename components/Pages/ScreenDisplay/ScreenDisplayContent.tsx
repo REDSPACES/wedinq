@@ -2,24 +2,49 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
-import {
-  TIME_LIMIT_SECONDS,
-  TIMER_INTERVAL_MS,
-  TOTAL_QUESTIONS,
-} from "../../../lib/constants/quiz";
-import { getSlideImagePath } from "../../../lib/utils/quiz-images";
-import type { RankingEntry, ScreenDisplayState } from "../../../types/quiz";
+import { TIME_LIMIT_SECONDS, TIMER_INTERVAL_MS } from "../../../lib/constants/quiz";
+
+// 全スライドのファイル名（1から順番に）
+const SLIDE_FILENAMES = [
+  "1-TOP.jpg",
+  "2-qr.jpg",
+  "3-rule.jpg",
+  "4-question-1.jpg",
+  "5-answer-1.jpg",
+  "6-question-2.jpg",
+  "7-answer-2.jpg",
+  "8-question-3.jpg",
+  "9-answer-3.jpg",
+  "10-question-4.jpg",
+  "11-answer-4.jpg",
+  "12-question-5.jpg",
+  "13-answer-5.jpg",
+  "14-result.jpg",
+  "15-resultname.jpg",
+  "16-end.jpg",
+];
+
+// カウントダウンを表示するスライド番号（ファイル名4,6,8,10,12 = インデックス3,5,7,9,11）
+const COUNTDOWN_SLIDE_INDICES = [3, 5, 7, 9, 11];
 
 export default function ScreenDisplayContent() {
-  const [state, setState] = useState<ScreenDisplayState>("standby");
-  const [currentQuestion, setCurrentQuestion] = useState(1);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT_SECONDS);
-  const [rankings, setRankings] = useState<RankingEntry[]>([]);
   const [imageError, setImageError] = useState(false);
+  const [isCountdownActive, setIsCountdownActive] = useState(false);
 
-  // タイマーのカウントダウン
+  // カウントダウンが必要なスライドかチェック
   useEffect(() => {
-    if (state !== "question_display" || timeLeft <= 0) {
+    const needsCountdown = COUNTDOWN_SLIDE_INDICES.includes(currentSlideIndex);
+    setIsCountdownActive(needsCountdown);
+    if (needsCountdown) {
+      setTimeLeft(TIME_LIMIT_SECONDS);
+    }
+  }, [currentSlideIndex]);
+
+  // カウントダウンタイマー
+  useEffect(() => {
+    if (!isCountdownActive || timeLeft <= 0) {
       return;
     }
 
@@ -28,249 +53,113 @@ export default function ScreenDisplayContent() {
     }, TIMER_INTERVAL_MS);
 
     return () => clearTimeout(timer);
-  }, [state, timeLeft]);
+  }, [isCountdownActive, timeLeft]);
 
-  // モックランキングデータを生成（実際の実装ではSupabaseから取得）
-  const generateMockRankings = useCallback((): RankingEntry[] => {
-    return [
-      { rank: 1, nickname: "太郎さん", correctCount: currentQuestion, averageResponseTime: 2.3 },
-      { rank: 2, nickname: "花子さん", correctCount: currentQuestion, averageResponseTime: 3.1 },
-      {
-        rank: 3,
-        nickname: "次郎さん",
-        correctCount: currentQuestion - 1,
-        averageResponseTime: 2.8,
-      },
-    ];
-  }, [currentQuestion]);
-
-  // 次へ進む
+  // 次のスライドへ
   const handleNext = useCallback(() => {
     setImageError(false);
-
-    if (state === "standby") {
-      setState("question_display");
-      setCurrentQuestion(1);
-      setTimeLeft(TIME_LIMIT_SECONDS);
-    } else if (state === "question_display") {
-      setState("result_display");
-      setRankings(generateMockRankings());
-    } else if (state === "result_display") {
-      if (currentQuestion < TOTAL_QUESTIONS) {
-        setState("question_display");
-        setCurrentQuestion((prev) => prev + 1);
-        setTimeLeft(TIME_LIMIT_SECONDS);
-      } else {
-        setState("finished");
-      }
-    } else if (state === "finished") {
-      // リセット
-      setState("standby");
-      setCurrentQuestion(1);
-      setTimeLeft(TIME_LIMIT_SECONDS);
-      setRankings([]);
+    if (currentSlideIndex < SLIDE_FILENAMES.length - 1) {
+      setCurrentSlideIndex((prev) => prev + 1);
     }
-  }, [state, currentQuestion, generateMockRankings]);
+  }, [currentSlideIndex]);
+
+  // 前のスライドへ
+  const handlePrevious = useCallback(() => {
+    setImageError(false);
+    if (currentSlideIndex > 0) {
+      setCurrentSlideIndex((prev) => prev - 1);
+    }
+  }, [currentSlideIndex]);
+
+  // 最初に戻る
+  const handleReset = useCallback(() => {
+    setImageError(false);
+    setCurrentSlideIndex(0);
+  }, []);
 
   // 画像読み込みエラーハンドラー
   const handleImageError = useCallback(() => {
     setImageError(true);
-    console.error(`Failed to load image for question ${currentQuestion}`);
-  }, [currentQuestion]);
+    console.error(`Failed to load slide: ${SLIDE_FILENAMES[currentSlideIndex]}`);
+  }, [currentSlideIndex]);
+
+  const currentSlideFilename = SLIDE_FILENAMES[currentSlideIndex];
+  const currentSlideNumber = currentSlideIndex + 1;
 
   return (
     <div className="flex h-screen w-screen items-center justify-center bg-gray-900">
       {/* 16:9 アスペクト比のコンテナ */}
       <div className="relative h-full w-full max-h-screen max-w-[177.78vh]">
         <div className="relative h-full w-full bg-gradient-to-br from-pink-50 via-white to-pink-50">
-          {/* 待機画面 */}
-          {state === "standby" && (
-            <div className="relative h-full w-full">
-              <Image
-                src={getSlideImagePath("qr")}
-                alt="QRコード"
-                fill
-                className="object-cover"
-                priority
-                onError={handleImageError}
-              />
-              {imageError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-pink-50 via-white to-pink-50 p-16">
-                  <h1
-                    className="mb-12 text-7xl font-bold text-pink-900"
-                    style={{ fontFamily: '"Playfair Display", serif' }}
-                  >
-                    Wedding Quiz
-                  </h1>
-                  <div className="mb-8 rounded-3xl bg-white p-12 shadow-2xl">
-                    <div className="mb-6 text-center text-3xl font-semibold text-gray-700">
-                      スマートフォンでQRコードを
-                      <br />
-                      読み取ってください
-                    </div>
-                  </div>
-                </div>
-              )}
-              <button
-                type="button"
-                onClick={handleNext}
-                className="absolute bottom-12 right-12 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-16 py-6 text-3xl font-bold text-white shadow-lg transition-all hover:scale-105 hover:shadow-xl"
-              >
-                クイズを開始
-              </button>
-            </div>
-          )}
+          {/* メインスライド画像 */}
+          <div className="relative h-full w-full">
+            <Image
+              src={`/quiz-slides/${currentSlideFilename}`}
+              alt={`スライド ${currentSlideNumber}`}
+              fill
+              className="object-contain"
+              priority
+              onError={handleImageError}
+            />
 
-          {/* 問題表示画面 */}
-          {state === "question_display" && (
-            <div className="relative h-full w-full">
-              {/* カウントダウンタイマー（右上） */}
+            {/* カウントダウンタイマー（右上）- 特定のスライドのみ */}
+            {isCountdownActive && (
               <div className="absolute right-12 top-12 z-10">
-                <div className="flex h-32 w-32 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-pink-600 shadow-2xl">
-                  <span className="text-5xl font-bold text-white">{timeLeft}</span>
+                <div className="flex h-40 w-40 items-center justify-center rounded-full bg-gradient-to-br from-rose-500 to-pink-600 shadow-2xl">
+                  <span className="text-7xl font-bold text-white">{timeLeft}</span>
                 </div>
               </div>
+            )}
 
-              {/* 問題番号（左上） */}
-              <div className="absolute left-12 top-12 z-10">
-                <div className="rounded-2xl bg-white/90 px-8 py-4 shadow-lg backdrop-blur-sm">
-                  <span className="text-4xl font-bold text-pink-900">第 {currentQuestion} 問</span>
+            {/* 画像読み込みエラー表示 */}
+            {imageError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
+                <div className="text-center">
+                  <span className="text-4xl text-gray-500">スライドの読み込みに失敗しました</span>
+                  <p className="mt-4 text-xl text-gray-400">{currentSlideFilename}</p>
                 </div>
               </div>
+            )}
 
-              {/* 問題画像 */}
-              <Image
-                src={getSlideImagePath("question", currentQuestion)}
-                alt={`第${currentQuestion}問`}
-                fill
-                className="object-contain"
-                priority
-                onError={handleImageError}
-              />
-
-              {imageError && (
-                <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200">
-                  <div className="text-center">
-                    <span className="text-4xl text-gray-500">問題画像の読み込みに失敗しました</span>
-                    <p className="mt-4 text-xl text-gray-400">
-                      {getSlideImagePath("question", currentQuestion)}
-                    </p>
-                  </div>
-                </div>
-              )}
-
-              {/* 次へボタン */}
+            {/* ナビゲーションボタン */}
+            <div className="absolute bottom-12 left-12 right-12 flex items-center justify-between">
+              {/* 前へボタン */}
               <button
                 type="button"
-                onClick={handleNext}
-                className="absolute bottom-12 right-12 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-12 py-5 text-2xl font-bold text-white shadow-lg transition-all hover:scale-105"
+                onClick={handlePrevious}
+                disabled={currentSlideIndex === 0}
+                className="rounded-full bg-gradient-to-r from-gray-500 to-gray-600 px-12 py-5 text-2xl font-bold text-white shadow-lg transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40"
               >
-                結果を表示 →
+                ← 前へ
               </button>
-            </div>
-          )}
 
-          {/* 結果表示画面 */}
-          {state === "result_display" && (
-            <div className="relative h-full w-full">
-              <Image
-                src={getSlideImagePath("resultname")}
-                alt="結果発表"
-                fill
-                className="object-cover"
-                priority
-                onError={handleImageError}
-              />
+              {/* スライド番号表示 */}
+              <div className="rounded-2xl bg-white/90 px-8 py-4 shadow-lg backdrop-blur-sm">
+                <span className="text-3xl font-bold text-pink-900">
+                  {currentSlideNumber} / {SLIDE_FILENAMES.length}
+                </span>
+              </div>
 
-              {imageError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-pink-50 via-white to-pink-50 p-16">
-                  <h2
-                    className="mb-12 text-6xl font-bold text-pink-900"
-                    style={{ fontFamily: '"Playfair Display", serif' }}
-                  >
-                    第 {currentQuestion} 問 結果発表
-                  </h2>
-
-                  {/* TOP3ランキング */}
-                  <div className="mb-12 w-full max-w-5xl space-y-6">
-                    {rankings.map((entry) => (
-                      <div
-                        key={entry.rank}
-                        className={`flex items-center justify-between rounded-2xl p-8 shadow-lg ${
-                          entry.rank === 1
-                            ? "bg-gradient-to-r from-yellow-300 to-yellow-400"
-                            : entry.rank === 2
-                              ? "bg-gradient-to-r from-gray-300 to-gray-400"
-                              : "bg-gradient-to-r from-orange-300 to-orange-400"
-                        }`}
-                      >
-                        <div className="flex items-center gap-8">
-                          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-white shadow-md">
-                            <span className="text-4xl font-bold text-gray-800">{entry.rank}</span>
-                          </div>
-                          <span className="text-4xl font-bold text-gray-900">{entry.nickname}</span>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-3xl font-bold text-gray-900">
-                            正解数: {entry.correctCount}
-                          </div>
-                          <div className="text-xl text-gray-700">
-                            平均回答時間: {entry.averageResponseTime.toFixed(1)}秒
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+              {/* 次へボタン（最後のスライドでは「最初に戻る」） */}
+              {currentSlideIndex < SLIDE_FILENAMES.length - 1 ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-12 py-5 text-2xl font-bold text-white shadow-lg transition-all hover:scale-105"
+                >
+                  次へ →
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleReset}
+                  className="rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-12 py-5 text-2xl font-bold text-white shadow-lg transition-all hover:scale-105"
+                >
+                  最初に戻る
+                </button>
               )}
-
-              <button
-                type="button"
-                onClick={handleNext}
-                className="absolute bottom-12 right-12 rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-16 py-6 text-3xl font-bold text-white shadow-lg transition-all hover:scale-105"
-              >
-                {currentQuestion < TOTAL_QUESTIONS ? "次の問題へ →" : "最終結果を表示 →"}
-              </button>
             </div>
-          )}
-
-          {/* 終了画面 */}
-          {state === "finished" && (
-            <div className="relative h-full w-full">
-              <Image
-                src={getSlideImagePath("end")}
-                alt="終了"
-                fill
-                className="object-cover"
-                priority
-                onError={handleImageError}
-              />
-
-              {imageError && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-pink-50 via-white to-pink-50 p-16">
-                  <h1
-                    className="mb-12 text-8xl font-bold text-pink-900"
-                    style={{ fontFamily: '"Playfair Display", serif' }}
-                  >
-                    ご参加ありがとうございました
-                  </h1>
-                  <p className="mb-16 text-4xl text-gray-700">
-                    クイズはこれで終了です
-                    <br />
-                    素敵な時間をお過ごしください
-                  </p>
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={handleNext}
-                className="absolute bottom-12 right-12 rounded-full bg-gradient-to-r from-gray-500 to-gray-600 px-12 py-5 text-2xl font-bold text-white shadow-lg transition-all hover:scale-105"
-              >
-                最初に戻る
-              </button>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
