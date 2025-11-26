@@ -2,9 +2,16 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { RANKING_DISPLAY_COUNT, TOTAL_QUESTIONS } from "../../../lib/constants/quiz";
+import {
+  RANKING_DISPLAY_COUNT,
+  TOTAL_QUESTIONS,
+} from "../../../lib/constants/quiz";
 import { saveQuizState } from "../../../lib/utils/quiz-state";
-import type { GuestAnswer, RankingEntry, SessionStatus } from "../../../types/quiz";
+import type {
+  GuestAnswer,
+  RankingEntry,
+  SessionStatus,
+} from "../../../types/quiz";
 
 // スライドファイル名の定義
 const SLIDE_FILENAMES = [
@@ -121,147 +128,122 @@ export default function ControlPanelContent() {
     }
   }, []);
 
-  const calculateFinalRankings = useCallback((allAnswersData: GuestAnswer[]): RankingEntry[] => {
-    const guestStats = new Map<
-      string,
-      { nickname: string; correctCount: number; totalTime: number }
-    >();
+  const calculateFinalRankings = useCallback(
+    (allAnswersData: GuestAnswer[]): RankingEntry[] => {
+      const guestStats = new Map<
+        string,
+        { nickname: string; correctCount: number; totalTime: number }
+      >();
 
-    for (const answer of allAnswersData) {
-      if (!answer.isCorrect) continue;
+      for (const answer of allAnswersData) {
+        if (!answer.isCorrect) continue;
 
-      const existing = guestStats.get(answer.guestId);
-      const responseTime = answer.answeredAt;
+        const existing = guestStats.get(answer.guestId);
+        const responseTime = answer.answeredAt;
 
-      if (existing) {
-        existing.correctCount++;
-        existing.totalTime += responseTime;
-      } else {
-        guestStats.set(answer.guestId, {
-          nickname: answer.nickname,
-          correctCount: 1,
-          totalTime: responseTime,
-        });
-      }
-    }
-
-    const rankingList = Array.from(guestStats.entries())
-      .map(([, stats]) => ({
-        nickname: stats.nickname,
-        correctCount: stats.correctCount,
-        averageResponseTime: stats.totalTime / stats.correctCount / 1000,
-      }))
-      .sort((a, b) => {
-        if (a.correctCount !== b.correctCount) {
-          return b.correctCount - a.correctCount;
+        if (existing) {
+          existing.correctCount++;
+          existing.totalTime += responseTime;
+        } else {
+          guestStats.set(answer.guestId, {
+            nickname: answer.nickname,
+            correctCount: 1,
+            totalTime: responseTime,
+          });
         }
-        return a.averageResponseTime - b.averageResponseTime;
-      })
-      .slice(0, RANKING_DISPLAY_COUNT)
-      .map((entry, index) => ({
-        rank: index + 1,
-        ...entry,
-      }));
+      }
 
-    return rankingList;
-  }, []);
+      const rankingList = Array.from(guestStats.entries())
+        .map(([, stats]) => ({
+          nickname: stats.nickname,
+          correctCount: stats.correctCount,
+          averageResponseTime: stats.totalTime / stats.correctCount / 1000,
+        }))
+        .sort((a, b) => {
+          if (a.correctCount !== b.correctCount) {
+            return b.correctCount - a.correctCount;
+          }
+          return a.averageResponseTime - b.averageResponseTime;
+        })
+        .slice(0, RANKING_DISPLAY_COUNT)
+        .map((entry, index) => ({
+          rank: index + 1,
+          ...entry,
+        }));
+
+      return rankingList;
+    },
+    []
+  );
 
   const handleNextQuestion = useCallback(() => {
     try {
-      // 回答スライドから次の問題へ移動する場合
-      if (showResults) {
-        setAllAnswers((prev) => [...prev, ...answers]);
-        setShowResults(false);
+      setAllAnswers((prev) => [...prev, ...answers]);
+      setShowResults(false);
 
-        if (currentQuestion < TOTAL_QUESTIONS) {
-          const nextQuestion = currentQuestion + 1;
-          const nextSlideIndex = currentSlideIndex + 1; // 次の問題スライドへ
+      if (currentQuestion < TOTAL_QUESTIONS) {
+        const nextQuestion = currentQuestion + 1;
+        const nextSlideIndex = currentSlideIndex + 2; // 次の問題スライドへ（回答→問題で+2）
 
-          setCurrentQuestion(nextQuestion);
-          setCurrentSlideIndex(nextSlideIndex);
-          setAnswers([]);
-
-          // 状態を保存してscreenに通知
-          saveQuizState({
-            currentSlideIndex: nextSlideIndex,
-            sessionStatus: "playing",
-            currentQuestion: nextQuestion,
-          });
-
-          console.log(`Moving to question ${nextQuestion}`);
-        } else {
-          const allAnswersWithCurrent = [...allAnswers, ...answers];
-          const finalRankings = calculateFinalRankings(allAnswersWithCurrent);
-          setRankings(finalRankings);
-          setSessionStatus("finished");
-          setCurrentSlideIndex(13); // 結果スライドへ
-
-          // 状態を保存してscreenに通知
-          saveQuizState({
-            currentSlideIndex: 13,
-            sessionStatus: "finished",
-            currentQuestion: TOTAL_QUESTIONS,
-          });
-
-          console.log("Quiz session finished", { finalRankings });
-        }
-      } else {
-        // 問題スライドから次へ移動（スライドを順に進める）
-        const nextSlideIndex = currentSlideIndex + 1;
+        setCurrentQuestion(nextQuestion);
         setCurrentSlideIndex(nextSlideIndex);
+        setAnswers([]);
 
         // 状態を保存してscreenに通知
         saveQuizState({
           currentSlideIndex: nextSlideIndex,
           sessionStatus: "playing",
-          currentQuestion,
+          currentQuestion: nextQuestion,
         });
 
-        console.log(`Moving to slide ${nextSlideIndex}`);
+        console.log(`Moving to question ${nextQuestion}`);
+      } else {
+        const allAnswersWithCurrent = [...allAnswers, ...answers];
+        const finalRankings = calculateFinalRankings(allAnswersWithCurrent);
+        setRankings(finalRankings);
+        setSessionStatus("finished");
+        setCurrentSlideIndex(13); // 結果スライドへ
+
+        // 状態を保存してscreenに通知
+        saveQuizState({
+          currentSlideIndex: 13,
+          sessionStatus: "finished",
+          currentQuestion: TOTAL_QUESTIONS,
+        });
+
+        console.log("Quiz session finished", { finalRankings });
       }
     } catch (error) {
       console.error("Failed to proceed to next question:", error);
       alert("次の問題への移動に失敗しました。");
     }
-  }, [currentQuestion, currentSlideIndex, answers, allAnswers, calculateFinalRankings, showResults]);
+  }, [
+    currentQuestion,
+    currentSlideIndex,
+    answers,
+    allAnswers,
+    calculateFinalRankings,
+  ]);
 
   const handleShowResults = useCallback(() => {
     try {
-      // 回答スライドの場合は前のスライドへ戻る
-      if (showResults) {
-        setShowResults(false);
-        const prevSlideIndex = currentSlideIndex - 1;
-        setCurrentSlideIndex(prevSlideIndex);
+      setShowResults(true);
+      const resultSlideIndex = currentSlideIndex + 1; // 回答スライドへ
+      setCurrentSlideIndex(resultSlideIndex);
 
-        // 状態を保存してscreenに通知
-        saveQuizState({
-          currentSlideIndex: prevSlideIndex,
-          sessionStatus: "playing",
-          currentQuestion,
-        });
+      // 状態を保存してscreenに通知
+      saveQuizState({
+        currentSlideIndex: resultSlideIndex,
+        sessionStatus: "playing",
+        currentQuestion,
+      });
 
-        console.log("Going back to question slide", currentQuestion);
-      } else {
-        // 問題スライドの場合は前のスライドへ
-        if (currentSlideIndex > 0) {
-          const prevSlideIndex = currentSlideIndex - 1;
-          setCurrentSlideIndex(prevSlideIndex);
-
-          // 状態を保存してscreenに通知
-          saveQuizState({
-            currentSlideIndex: prevSlideIndex,
-            sessionStatus: "playing",
-            currentQuestion,
-          });
-
-          console.log(`Going back to slide ${prevSlideIndex}`);
-        }
-      }
+      console.log("Showing results for question", currentQuestion);
     } catch (error) {
-      console.error("Failed to go back:", error);
-      alert("前の画面への移動に失敗しました。");
+      console.error("Failed to show results:", error);
+      alert("結果の表示に失敗しました。");
     }
-  }, [currentQuestion, currentSlideIndex, showResults]);
+  }, [currentQuestion, currentSlideIndex]);
 
   const _getElapsedTime = useCallback((answeredAt: number): string => {
     const elapsed = (Date.now() - answeredAt) / 1000;
@@ -276,16 +258,24 @@ export default function ControlPanelContent() {
         {/* ヘッダー - Material 3スタイル */}
         <div className="flex items-center justify-between rounded-3xl bg-gradient-to-r from-[#6750a4] to-[#7f67be] px-6 py-3 shadow-lg">
           <div>
-            <h1 className="text-xl font-bold text-white">クイズコントロールパネル</h1>
+            <h1 className="text-xl font-bold text-white">
+              クイズコントロールパネル
+            </h1>
             <p className="text-xs text-[#e8def8]">Moderator Dashboard</p>
           </div>
           <div className="flex items-center gap-4">
             {/* 参加者カウント */}
             <div className="flex items-center gap-2 rounded-full bg-white/20 px-5 py-2 backdrop-blur">
-              <svg className="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+              <svg
+                className="h-5 w-5 text-white"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
                 <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
               </svg>
-              <span className="text-sm font-semibold text-white">参加者: {guestCount}名</span>
+              <span className="text-sm font-semibold text-white">
+                参加者: {guestCount}名
+              </span>
             </div>
             {/* セッション状態 */}
             <div className="flex items-center gap-2 rounded-full bg-white/20 px-5 py-2 backdrop-blur">
@@ -294,16 +284,16 @@ export default function ControlPanelContent() {
                   sessionStatus === "playing"
                     ? "bg-[#4caf50] animate-pulse"
                     : sessionStatus === "finished"
-                      ? "bg-[#2196f3]"
-                      : "bg-[#ff9800]"
+                    ? "bg-[#2196f3]"
+                    : "bg-[#ff9800]"
                 }`}
               />
               <span className="text-sm font-semibold text-white">
                 {sessionStatus === "waiting"
                   ? "待機中"
                   : sessionStatus === "playing"
-                    ? "進行中"
-                    : "終了"}
+                  ? "進行中"
+                  : "終了"}
               </span>
             </div>
           </div>
@@ -315,7 +305,9 @@ export default function ControlPanelContent() {
           <div className="flex flex-col gap-3">
             {/* スクリーンプレビュー */}
             <div className="flex-1 overflow-hidden rounded-3xl bg-white p-4 shadow-lg">
-              <h2 className="mb-2 text-sm font-bold text-[#1c1b1f]">スクリーンプレビュー</h2>
+              <h2 className="mb-2 text-sm font-bold text-[#1c1b1f]">
+                スクリーンプレビュー
+              </h2>
               <div className="relative h-[calc(100%-32px)] w-full overflow-hidden rounded-2xl bg-gray-100">
                 <Image
                   src={`/quiz-slides/${currentSlideFilename}`}
@@ -346,16 +338,20 @@ export default function ControlPanelContent() {
                     <button
                       type="button"
                       onClick={handleShowResults}
-                      className="flex-1 rounded-full bg-[#2196f3] px-6 py-4 text-base font-bold text-white shadow-md transition-all hover:bg-[#42a5f5] hover:shadow-xl active:scale-95"
+                      disabled={showResults}
+                      className="flex-1 rounded-full bg-[#2196f3] px-6 py-4 text-base font-bold text-white shadow-md transition-all hover:bg-[#42a5f5] hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       前へ
                     </button>
                     <button
                       type="button"
                       onClick={handleNextQuestion}
-                      className="flex-1 rounded-full bg-[#6750a4] px-6 py-4 text-base font-bold text-white shadow-md transition-all hover:bg-[#7f67be] hover:shadow-xl active:scale-95"
+                      disabled={!showResults}
+                      className="flex-1 rounded-full bg-[#6750a4] px-6 py-4 text-base font-bold text-white shadow-md transition-all hover:bg-[#7f67be] hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      {currentQuestion < TOTAL_QUESTIONS ? "次へ" : "最終結果"}
+                      {currentQuestion < TOTAL_QUESTIONS
+                        ? "次の問題へ"
+                        : "最終結果"}
                     </button>
                   </>
                 )}
@@ -367,7 +363,9 @@ export default function ControlPanelContent() {
           <div className="overflow-hidden rounded-3xl bg-white p-5 shadow-lg">
             <h2 className="mb-4 text-base font-bold text-[#1c1b1f]">
               正解者トップ3{" "}
-              <span className="text-sm font-normal text-[#79747e]">（リアルタイム）</span>
+              <span className="text-sm font-normal text-[#79747e]">
+                （リアルタイム）
+              </span>
             </h2>
             {rankings.length === 0 ? (
               <div className="flex h-[calc(100%-40px)] items-center justify-center">
@@ -382,8 +380,8 @@ export default function ControlPanelContent() {
                       entry.rank === 1
                         ? "border-[#ffd700] bg-gradient-to-br from-[#fff9e6] to-[#fffaed] shadow-md"
                         : entry.rank === 2
-                          ? "border-[#c0c0c0] bg-gradient-to-br from-[#f5f5f5] to-[#fafafa] shadow-sm"
-                          : "border-[#cd7f32] bg-gradient-to-br from-[#fff4e6] to-[#fff7ed] shadow-sm"
+                        ? "border-[#c0c0c0] bg-gradient-to-br from-[#f5f5f5] to-[#fafafa] shadow-sm"
+                        : "border-[#cd7f32] bg-gradient-to-br from-[#fff4e6] to-[#fff7ed] shadow-sm"
                     }`}
                   >
                     <div
@@ -391,17 +389,23 @@ export default function ControlPanelContent() {
                         entry.rank === 1
                           ? "bg-[#ffd700]"
                           : entry.rank === 2
-                            ? "bg-[#c0c0c0]"
-                            : "bg-[#cd7f32]"
+                          ? "bg-[#c0c0c0]"
+                          : "bg-[#cd7f32]"
                       }`}
                     >
                       {entry.rank}
                     </div>
                     <div className="flex-1">
-                      <div className="text-lg font-bold text-[#1c1b1f]">{entry.nickname}</div>
+                      <div className="text-lg font-bold text-[#1c1b1f]">
+                        {entry.nickname}
+                      </div>
                       <div className="mt-1 flex items-center gap-3 text-sm text-[#49454f]">
                         <span className="flex items-center gap-1">
-                          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                          <svg
+                            className="h-4 w-4"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
                             <path
                               fillRule="evenodd"
                               d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -411,7 +415,11 @@ export default function ControlPanelContent() {
                           正解: {entry.correctCount}問
                         </span>
                         <span className="flex items-center gap-1">
-                          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                          <svg
+                            className="h-4 w-4"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                          >
                             <path
                               fillRule="evenodd"
                               d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
