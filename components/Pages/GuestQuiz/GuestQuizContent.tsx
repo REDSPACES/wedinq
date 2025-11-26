@@ -201,8 +201,8 @@ export default function GuestQuizContent() {
         {screenState === "question_display" && (
           <div className="animate-fadeIn rounded-3xl bg-white p-8 shadow-2xl">
             <div className="mb-6 text-center">
-              <div className="mb-2 inline-block rounded-full bg-pink-100 px-4 py-1 text-sm font-semibold text-pink-800">
-                第 {currentQuestion} 問 / {TOTAL_QUESTIONS}
+              <div className="mb-2 inline-block rounded-full bg-pink-100 px-4 py-1 text-lg font-semibold text-pink-800">
+                第 {currentQuestion} 問
               </div>
               <h2 className="text-xl font-bold text-gray-800">問題</h2>
               <p className="mt-2 text-sm text-gray-600">
