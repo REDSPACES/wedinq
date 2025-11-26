@@ -12,9 +12,7 @@ export default function GuestQuizContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // モック：セッション状態（実際はSupabase Realtimeから取得）
-  const [sessionStatus, setSessionStatus] = useState<
-    "waiting" | "playing" | "finished"
-  >("waiting");
+  const [sessionStatus, setSessionStatus] = useState<"waiting" | "playing" | "finished">("waiting");
   const [sessionCurrentQuestion, setSessionCurrentQuestion] = useState(1);
 
   // セッション状態の変更を監視（実際はSupabase Realtimeで実装）
@@ -147,9 +145,7 @@ export default function GuestQuizContent() {
         {screenState === "nickname_input" && (
           <div className="animate-fadeIn rounded-3xl bg-white p-8 shadow-2xl">
             <div className="mb-6 text-center">
-              <h2 className="mb-2 text-2xl font-bold text-pink-900">
-                ニックネーム入力
-              </h2>
+              <h2 className="mb-2 text-2xl font-bold text-pink-900">ニックネーム入力</h2>
               <p className="text-sm text-gray-600">
                 ランキングに表示されるニックネームを
                 <br />
@@ -192,9 +188,7 @@ export default function GuestQuizContent() {
             <div className="mb-6 flex justify-center">
               <div className="h-16 w-16 animate-spin rounded-full border-4 border-pink-200 border-t-pink-600" />
             </div>
-            <h2 className="mb-2 text-2xl font-bold text-pink-900">
-              ただいま準備中…
-            </h2>
+            <h2 className="mb-2 text-2xl font-bold text-pink-900">ただいま準備中…</h2>
             <p className="text-gray-600">
               クイズが始まるまで
               <br />
@@ -256,9 +250,7 @@ export default function GuestQuizContent() {
             <div className="mb-6 flex justify-center">
               <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
             </div>
-            <h2 className="mb-2 text-2xl font-bold text-blue-900">
-              回答を送信しました
-            </h2>
+            <h2 className="mb-2 text-2xl font-bold text-blue-900">回答を送信しました</h2>
             <p className="text-gray-600">
               次の問題の準備中です
               <br />
