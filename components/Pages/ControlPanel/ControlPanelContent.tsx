@@ -271,6 +271,7 @@ export default function ControlPanelContent() {
                 fill="currentColor"
                 viewBox="0 0 20 20"
               >
+                <title>参加者アイコン</title>
                 <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
               </svg>
               <span className="text-sm font-semibold text-white">
@@ -406,6 +407,7 @@ export default function ControlPanelContent() {
                             fill="currentColor"
                             viewBox="0 0 20 20"
                           >
+                            <title>正解アイコン</title>
                             <path
                               fillRule="evenodd"
                               d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -420,6 +422,7 @@ export default function ControlPanelContent() {
                             fill="currentColor"
                             viewBox="0 0 20 20"
                           >
+                            <title>回答時間アイコン</title>
                             <path
                               fillRule="evenodd"
                               d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
