@@ -1,17 +1,39 @@
 "use client";
 
+import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CHOICE_LABELS, RANKING_DISPLAY_COUNT, TOTAL_QUESTIONS } from "../../../lib/constants/quiz";
+import { RANKING_DISPLAY_COUNT, TOTAL_QUESTIONS } from "../../../lib/constants/quiz";
 import type { GuestAnswer, RankingEntry, SessionStatus } from "../../../types/quiz";
+
+// スライドファイル名の定義
+const SLIDE_FILENAMES = [
+  "1-TOP.jpg",
+  "2-qr.jpg",
+  "3-rule.jpg",
+  "4-question-1.jpg",
+  "5-answer-1.jpg",
+  "6-question-2.jpg",
+  "7-answer-2.jpg",
+  "8-question-3.jpg",
+  "9-answer-3.jpg",
+  "10-question-4.jpg",
+  "11-answer-4.jpg",
+  "12-question-5.jpg",
+  "13-answer-5.jpg",
+  "14-result.jpg",
+  "15-resultname.jpg",
+  "16-end.jpg",
+];
 
 export default function ControlPanelContent() {
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>("waiting");
   const [currentQuestion, setCurrentQuestion] = useState(1);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [guestCount, setGuestCount] = useState(0);
-  const [answerCount, setAnswerCount] = useState(0);
   const [answers, setAnswers] = useState<GuestAnswer[]>([]);
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
   const [allAnswers, setAllAnswers] = useState<GuestAnswer[]>([]);
+  const [showResults, setShowResults] = useState(false);
 
   // モックデータ生成
   const mockAnswersData = useMemo(() => {
@@ -41,7 +63,15 @@ export default function ControlPanelContent() {
         questionNumber: currentQuestion,
         choice: 1,
         answeredAt: baseTime - 2800,
-        isCorrect: Math.random() > 0.3,
+        isCorrect: true,
+      },
+      {
+        guestId: "4",
+        nickname: "美咲さん",
+        questionNumber: currentQuestion,
+        choice: 0,
+        answeredAt: baseTime - 4500,
+        isCorrect: true,
       },
     ];
   }, [sessionStatus, currentQuestion]);
@@ -50,17 +80,31 @@ export default function ControlPanelContent() {
     if (sessionStatus === "playing" && mockAnswersData.length > 0) {
       setAnswers(mockAnswersData);
       setGuestCount(Math.floor(Math.random() * 10) + 20);
-      setAnswerCount(Math.floor(Math.random() * 10) + 15);
+
+      // リアルタイムランキングを計算（現在の問題の正解者をタイム順）
+      const currentRankings: RankingEntry[] = mockAnswersData
+        .filter((a) => a.isCorrect)
+        .sort((a, b) => a.answeredAt - b.answeredAt)
+        .slice(0, RANKING_DISPLAY_COUNT)
+        .map((a, index) => ({
+          rank: index + 1,
+          nickname: a.nickname,
+          correctCount: currentQuestion,
+          averageResponseTime: (Date.now() - a.answeredAt) / 1000,
+        }));
+      setRankings(currentRankings);
     }
-  }, [sessionStatus, mockAnswersData]);
+  }, [sessionStatus, mockAnswersData, currentQuestion]);
 
   const handleStart = useCallback(() => {
     try {
       setSessionStatus("playing");
       setCurrentQuestion(1);
+      setCurrentSlideIndex(0);
       setAnswers([]);
       setRankings([]);
       setAllAnswers([]);
+      setShowResults(false);
       console.log("Quiz session started");
     } catch (error) {
       console.error("Failed to start quiz session:", error);
@@ -116,17 +160,19 @@ export default function ControlPanelContent() {
   const handleNextQuestion = useCallback(() => {
     try {
       setAllAnswers((prev) => [...prev, ...answers]);
+      setShowResults(false);
 
       if (currentQuestion < TOTAL_QUESTIONS) {
         setCurrentQuestion((prev) => prev + 1);
+        setCurrentSlideIndex((prev) => prev + 2); // 次の問題スライドへ（回答→問題で+2）
         setAnswers([]);
-        setRankings([]);
         console.log(`Moving to question ${currentQuestion + 1}`);
       } else {
         const allAnswersWithCurrent = [...allAnswers, ...answers];
         const finalRankings = calculateFinalRankings(allAnswersWithCurrent);
         setRankings(finalRankings);
         setSessionStatus("finished");
+        setCurrentSlideIndex(13); // 結果スライドへ
         console.log("Quiz session finished", { finalRankings });
       }
     } catch (error) {
@@ -139,11 +185,12 @@ export default function ControlPanelContent() {
     try {
       setSessionStatus("waiting");
       setCurrentQuestion(1);
+      setCurrentSlideIndex(0);
       setGuestCount(0);
-      setAnswerCount(0);
       setAnswers([]);
       setRankings([]);
       setAllAnswers([]);
+      setShowResults(false);
       console.log("Quiz session reset");
     } catch (error) {
       console.error("Failed to reset quiz session:", error);
@@ -153,42 +200,43 @@ export default function ControlPanelContent() {
 
   const handleShowResults = useCallback(() => {
     try {
-      const currentRankings: RankingEntry[] = answers
-        .filter((a) => a.isCorrect)
-        .sort((a, b) => a.answeredAt - b.answeredAt)
-        .slice(0, RANKING_DISPLAY_COUNT)
-        .map((a, index) => ({
-          rank: index + 1,
-          nickname: a.nickname,
-          correctCount: currentQuestion,
-          averageResponseTime: (Date.now() - a.answeredAt) / 1000,
-        }));
-      setRankings(currentRankings);
-      console.log("Current question results:", currentRankings);
+      setShowResults(true);
+      setCurrentSlideIndex((prev) => prev + 1); // 回答スライドへ
+      console.log("Showing results for question", currentQuestion);
     } catch (error) {
       console.error("Failed to show results:", error);
       alert("結果の表示に失敗しました。");
     }
-  }, [answers, currentQuestion]);
+  }, [currentQuestion]);
 
   const getElapsedTime = useCallback((answeredAt: number): string => {
     const elapsed = (Date.now() - answeredAt) / 1000;
     return elapsed.toFixed(1);
   }, []);
 
+  const currentSlideFilename = SLIDE_FILENAMES[currentSlideIndex];
+
   return (
-    <div className="flex h-screen w-full items-center justify-center bg-[#fef7ff] p-4">
-      <div className="flex h-full w-full max-w-7xl flex-col gap-4 overflow-hidden">
-        {/* ヘッダー */}
-        <div className="flex items-center justify-between rounded-2xl bg-gradient-to-r from-[#6750a4] to-[#7f67be] px-6 py-4 shadow-md">
+    <div className="flex h-screen w-full bg-[#fef7ff] p-6">
+      <div className="flex h-full w-full flex-col gap-4">
+        {/* ヘッダー - Material 3スタイル */}
+        <div className="flex items-center justify-between rounded-3xl bg-gradient-to-r from-[#6750a4] to-[#7f67be] px-6 py-3 shadow-lg">
           <div>
-            <h1 className="text-2xl font-bold text-white">クイズコントロール</h1>
-            <p className="text-sm text-[#e8def8]">Operator Dashboard</p>
+            <h1 className="text-xl font-bold text-white">クイズコントロールパネル</h1>
+            <p className="text-xs text-[#e8def8]">Moderator Dashboard</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 rounded-full bg-white/20 px-4 py-2 backdrop-blur">
+          <div className="flex items-center gap-4">
+            {/* 参加者カウント */}
+            <div className="flex items-center gap-2 rounded-full bg-white/20 px-5 py-2 backdrop-blur">
+              <svg className="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+              </svg>
+              <span className="text-sm font-semibold text-white">参加者: {guestCount}名</span>
+            </div>
+            {/* セッション状態 */}
+            <div className="flex items-center gap-2 rounded-full bg-white/20 px-5 py-2 backdrop-blur">
               <div
-                className={`h-2 w-2 rounded-full ${
+                className={`h-2.5 w-2.5 rounded-full ${
                   sessionStatus === "playing"
                     ? "bg-[#4caf50] animate-pulse"
                     : sessionStatus === "finished"
@@ -196,7 +244,7 @@ export default function ControlPanelContent() {
                       : "bg-[#ff9800]"
                 }`}
               />
-              <span className="text-sm font-medium text-white">
+              <span className="text-sm font-semibold text-white">
                 {sessionStatus === "waiting"
                   ? "待機中"
                   : sessionStatus === "playing"
@@ -207,39 +255,33 @@ export default function ControlPanelContent() {
           </div>
         </div>
 
-        {/* メインコンテンツエリア */}
-        <div className="grid flex-1 grid-cols-3 gap-4 overflow-hidden">
-          {/* 左カラム：セッション状態 */}
-          <div className="flex flex-col gap-4 overflow-auto">
-            <div className="rounded-xl bg-white p-4 shadow-sm">
-              <h2 className="mb-3 text-sm font-semibold text-[#1c1b1f]">セッション情報</h2>
-              <div className="space-y-2">
-                <div className="flex items-center justify-between rounded-lg bg-[#f5f5f5] p-3">
-                  <span className="text-sm text-[#49454f]">問題</span>
-                  <span className="text-lg font-bold text-[#6750a4]">
-                    {currentQuestion} / {TOTAL_QUESTIONS}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg bg-[#f5f5f5] p-3">
-                  <span className="text-sm text-[#49454f]">参加者</span>
-                  <span className="text-lg font-bold text-[#2196f3]">{guestCount}</span>
-                </div>
-                <div className="flex items-center justify-between rounded-lg bg-[#f5f5f5] p-3">
-                  <span className="text-sm text-[#49454f]">回答数</span>
-                  <span className="text-lg font-bold text-[#4caf50]">{answerCount}</span>
-                </div>
+        {/* メインコンテンツ - 2カラムレイアウト */}
+        <div className="grid h-[calc(100vh-120px)] grid-cols-2 gap-4">
+          {/* 左側: スクリーンプレビュー */}
+          <div className="flex flex-col gap-3">
+            {/* スクリーンプレビュー */}
+            <div className="flex-1 overflow-hidden rounded-3xl bg-white p-4 shadow-lg">
+              <h2 className="mb-2 text-sm font-bold text-[#1c1b1f]">スクリーンプレビュー</h2>
+              <div className="relative h-[calc(100%-32px)] w-full overflow-hidden rounded-2xl bg-gray-100">
+                <Image
+                  src={`/quiz-slides/${currentSlideFilename}`}
+                  alt={`スライド ${currentSlideIndex + 1}`}
+                  fill
+                  className="object-contain"
+                  priority
+                />
               </div>
             </div>
 
-            {/* 操作ボタン */}
-            <div className="rounded-xl bg-white p-4 shadow-sm">
-              <h2 className="mb-3 text-sm font-semibold text-[#1c1b1f]">操作</h2>
-              <div className="space-y-2">
+            {/* コントロールボタン */}
+            <div className="rounded-3xl bg-white p-4 shadow-lg">
+              <h2 className="mb-3 text-sm font-bold text-[#1c1b1f]">操作</h2>
+              <div className="flex gap-3">
                 {sessionStatus === "waiting" && (
                   <button
                     type="button"
                     onClick={handleStart}
-                    className="w-full rounded-full bg-[#6750a4] px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#7f67be] hover:shadow-lg active:scale-95"
+                    className="flex-1 rounded-full bg-[#6750a4] px-6 py-4 text-base font-bold text-white shadow-md transition-all hover:bg-[#7f67be] hover:shadow-xl active:scale-95"
                   >
                     クイズを開始
                   </button>
@@ -250,14 +292,16 @@ export default function ControlPanelContent() {
                     <button
                       type="button"
                       onClick={handleShowResults}
-                      className="w-full rounded-full bg-[#2196f3] px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#42a5f5] active:scale-95"
+                      disabled={showResults}
+                      className="flex-1 rounded-full bg-[#2196f3] px-6 py-4 text-base font-bold text-white shadow-md transition-all hover:bg-[#42a5f5] hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                      結果を表示
+                      回答を表示
                     </button>
                     <button
                       type="button"
                       onClick={handleNextQuestion}
-                      className="w-full rounded-full bg-[#6750a4] px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#7f67be] hover:shadow-lg active:scale-95"
+                      disabled={!showResults}
+                      className="flex-1 rounded-full bg-[#6750a4] px-6 py-4 text-base font-bold text-white shadow-md transition-all hover:bg-[#7f67be] hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {currentQuestion < TOTAL_QUESTIONS ? "次の問題へ" : "最終結果"}
                     </button>
@@ -267,7 +311,7 @@ export default function ControlPanelContent() {
                 <button
                   type="button"
                   onClick={handleReset}
-                  className="w-full rounded-full border border-[#79747e] bg-white px-6 py-3 text-sm font-semibold text-[#6750a4] transition-all hover:bg-[#f5f5f5] active:scale-95"
+                  className="rounded-full border-2 border-[#79747e] bg-white px-6 py-4 text-base font-bold text-[#6750a4] transition-all hover:bg-[#f5f5f5] active:scale-95"
                 >
                   リセット
                 </button>
@@ -275,68 +319,30 @@ export default function ControlPanelContent() {
             </div>
           </div>
 
-          {/* 中央カラム：リアルタイム回答 */}
-          <div className="overflow-auto rounded-xl bg-white p-4 shadow-sm">
-            <h2 className="mb-3 text-sm font-semibold text-[#1c1b1f]">
-              リアルタイム回答
-              {sessionStatus === "playing" && (
-                <span className="ml-2 text-xs text-[#79747e]">（第{currentQuestion}問）</span>
-              )}
+          {/* 右側: ランキング */}
+          <div className="overflow-hidden rounded-3xl bg-white p-5 shadow-lg">
+            <h2 className="mb-4 text-base font-bold text-[#1c1b1f]">
+              正解者トップ3 <span className="text-sm font-normal text-[#79747e]">（リアルタイム）</span>
             </h2>
-            <div className="space-y-2">
-              {sessionStatus === "playing" && answers.length === 0 && (
-                <p className="py-4 text-center text-sm text-[#79747e]">回答待ち...</p>
-              )}
-              {answers.map((answer) => (
-                <div
-                  key={answer.guestId}
-                  className={`flex items-center justify-between rounded-lg border p-3 ${
-                    answer.isCorrect
-                      ? "border-[#4caf50] bg-[#e8f5e9]"
-                      : "border-[#f44336] bg-[#ffebee]"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        answer.isCorrect ? "bg-[#4caf50] text-white" : "bg-[#f44336] text-white"
-                      }`}
-                    >
-                      {answer.isCorrect ? "正解" : "不正解"}
-                    </span>
-                    <span className="text-sm font-medium text-[#1c1b1f]">{answer.nickname}</span>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs text-[#49454f]">{CHOICE_LABELS[answer.choice]}</div>
-                    <div className="text-xs text-[#79747e]">
-                      {getElapsedTime(answer.answeredAt)}秒
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* 右カラム：ランキング */}
-          <div className="overflow-auto rounded-xl bg-white p-4 shadow-sm">
-            <h2 className="mb-3 text-sm font-semibold text-[#1c1b1f]">ランキング TOP3</h2>
             {rankings.length === 0 ? (
-              <p className="py-4 text-center text-sm text-[#79747e]">結果なし</p>
+              <div className="flex h-[calc(100%-40px)] items-center justify-center">
+                <p className="text-base text-[#79747e]">まだ正解者がいません</p>
+              </div>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {rankings.map((entry) => (
                   <div
                     key={entry.rank}
-                    className={`flex items-center gap-3 rounded-lg border p-3 ${
+                    className={`flex items-center gap-4 rounded-2xl border-2 p-5 transition-all ${
                       entry.rank === 1
-                        ? "border-[#ffd700] bg-gradient-to-r from-[#fff9e6] to-[#fffaed]"
+                        ? "border-[#ffd700] bg-gradient-to-br from-[#fff9e6] to-[#fffaed] shadow-md"
                         : entry.rank === 2
-                          ? "border-[#c0c0c0] bg-gradient-to-r from-[#f5f5f5] to-[#fafafa]"
-                          : "border-[#cd7f32] bg-gradient-to-r from-[#fff4e6] to-[#fff7ed]"
+                          ? "border-[#c0c0c0] bg-gradient-to-br from-[#f5f5f5] to-[#fafafa] shadow-sm"
+                          : "border-[#cd7f32] bg-gradient-to-br from-[#fff4e6] to-[#fff7ed] shadow-sm"
                     }`}
                   >
                     <div
-                      className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full font-bold text-white ${
+                      className={`flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full text-2xl font-bold text-white shadow-lg ${
                         entry.rank === 1
                           ? "bg-[#ffd700]"
                           : entry.rank === 2
@@ -347,10 +353,20 @@ export default function ControlPanelContent() {
                       {entry.rank}
                     </div>
                     <div className="flex-1">
-                      <div className="text-sm font-semibold text-[#1c1b1f]">{entry.nickname}</div>
-                      <div className="text-xs text-[#49454f]">
-                        正解: {entry.correctCount} 問 ・ 平均:{" "}
-                        {entry.averageResponseTime.toFixed(1)}秒
+                      <div className="text-lg font-bold text-[#1c1b1f]">{entry.nickname}</div>
+                      <div className="mt-1 flex items-center gap-3 text-sm text-[#49454f]">
+                        <span className="flex items-center gap-1">
+                          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                          </svg>
+                          正解: {entry.correctCount}問
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                          </svg>
+                          {entry.averageResponseTime.toFixed(1)}秒
+                        </span>
                       </div>
                     </div>
                   </div>
