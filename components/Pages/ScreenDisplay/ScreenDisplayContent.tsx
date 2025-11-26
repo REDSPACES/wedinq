@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
 import { TIME_LIMIT_SECONDS, TIMER_INTERVAL_MS } from "../../../lib/constants/quiz";
+import { getQuizState, subscribeToQuizState } from "../../../lib/utils/quiz-state";
 
 // 全スライドのファイル名（1から順番に）
 const SLIDE_FILENAMES = [
@@ -33,6 +34,24 @@ export default function ScreenDisplayContent() {
   const [imageError, setImageError] = useState(false);
   const [isCountdownActive, setIsCountdownActive] = useState(false);
 
+  // 初期状態をlocalStorageから読み込み
+  useEffect(() => {
+    const initialState = getQuizState();
+    setCurrentSlideIndex(initialState.currentSlideIndex);
+  }, []);
+
+  // controlパネルからの状態変更を監視
+  useEffect(() => {
+    const unsubscribe = subscribeToQuizState((state) => {
+      console.log("Screen received state update:", state);
+      setCurrentSlideIndex(state.currentSlideIndex);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
   // カウントダウンが必要なスライドかチェック
   useEffect(() => {
     const needsCountdown = COUNTDOWN_SLIDE_INDICES.includes(currentSlideIndex);
@@ -54,28 +73,6 @@ export default function ScreenDisplayContent() {
 
     return () => clearTimeout(timer);
   }, [isCountdownActive, timeLeft]);
-
-  // 次のスライドへ
-  const handleNext = useCallback(() => {
-    setImageError(false);
-    if (currentSlideIndex < SLIDE_FILENAMES.length - 1) {
-      setCurrentSlideIndex((prev) => prev + 1);
-    }
-  }, [currentSlideIndex]);
-
-  // 前のスライドへ
-  const handlePrevious = useCallback(() => {
-    setImageError(false);
-    if (currentSlideIndex > 0) {
-      setCurrentSlideIndex((prev) => prev - 1);
-    }
-  }, [currentSlideIndex]);
-
-  // 最初に戻る
-  const handleReset = useCallback(() => {
-    setImageError(false);
-    setCurrentSlideIndex(0);
-  }, []);
 
   // 画像読み込みエラーハンドラー
   const handleImageError = useCallback(() => {
@@ -120,38 +117,6 @@ export default function ScreenDisplayContent() {
                 </div>
               </div>
             )}
-
-            {/* ナビゲーションボタン */}
-            <div className="absolute bottom-12 left-12 right-12 flex items-center justify-between">
-              {/* 前へボタン */}
-              <button
-                type="button"
-                onClick={handlePrevious}
-                disabled={currentSlideIndex === 0}
-                className="rounded-full bg-gradient-to-r from-gray-500 to-gray-600 px-12 py-5 text-2xl font-bold text-white shadow-lg transition-all hover:scale-105 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                ← 前へ
-              </button>
-
-              {/* 次へボタン（最後のスライドでは「最初に戻る」） */}
-              {currentSlideIndex < SLIDE_FILENAMES.length - 1 ? (
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="rounded-full bg-gradient-to-r from-blue-500 to-indigo-600 px-12 py-5 text-2xl font-bold text-white shadow-lg transition-all hover:scale-105"
-                >
-                  次へ →
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="rounded-full bg-gradient-to-r from-pink-500 to-rose-500 px-12 py-5 text-2xl font-bold text-white shadow-lg transition-all hover:scale-105"
-                >
-                  最初に戻る
-                </button>
-              )}
-            </div>
           </div>
         </div>
       </div>

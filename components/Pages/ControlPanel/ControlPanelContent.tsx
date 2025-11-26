@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RANKING_DISPLAY_COUNT, TOTAL_QUESTIONS } from "../../../lib/constants/quiz";
+import { saveQuizState } from "../../../lib/utils/quiz-state";
 import type { GuestAnswer, RankingEntry, SessionStatus } from "../../../types/quiz";
 
 // スライドファイル名の定義
@@ -105,6 +106,14 @@ export default function ControlPanelContent() {
       setRankings([]);
       setAllAnswers([]);
       setShowResults(false);
+
+      // 状態を保存してscreenに通知
+      saveQuizState({
+        currentSlideIndex: 0,
+        sessionStatus: "playing",
+        currentQuestion: 1,
+      });
+
       console.log("Quiz session started");
     } catch (error) {
       console.error("Failed to start quiz session:", error);
@@ -159,57 +168,102 @@ export default function ControlPanelContent() {
 
   const handleNextQuestion = useCallback(() => {
     try {
-      setAllAnswers((prev) => [...prev, ...answers]);
-      setShowResults(false);
+      // 回答スライドから次の問題へ移動する場合
+      if (showResults) {
+        setAllAnswers((prev) => [...prev, ...answers]);
+        setShowResults(false);
 
-      if (currentQuestion < TOTAL_QUESTIONS) {
-        setCurrentQuestion((prev) => prev + 1);
-        setCurrentSlideIndex((prev) => prev + 2); // 次の問題スライドへ（回答→問題で+2）
-        setAnswers([]);
-        console.log(`Moving to question ${currentQuestion + 1}`);
+        if (currentQuestion < TOTAL_QUESTIONS) {
+          const nextQuestion = currentQuestion + 1;
+          const nextSlideIndex = currentSlideIndex + 1; // 次の問題スライドへ
+
+          setCurrentQuestion(nextQuestion);
+          setCurrentSlideIndex(nextSlideIndex);
+          setAnswers([]);
+
+          // 状態を保存してscreenに通知
+          saveQuizState({
+            currentSlideIndex: nextSlideIndex,
+            sessionStatus: "playing",
+            currentQuestion: nextQuestion,
+          });
+
+          console.log(`Moving to question ${nextQuestion}`);
+        } else {
+          const allAnswersWithCurrent = [...allAnswers, ...answers];
+          const finalRankings = calculateFinalRankings(allAnswersWithCurrent);
+          setRankings(finalRankings);
+          setSessionStatus("finished");
+          setCurrentSlideIndex(13); // 結果スライドへ
+
+          // 状態を保存してscreenに通知
+          saveQuizState({
+            currentSlideIndex: 13,
+            sessionStatus: "finished",
+            currentQuestion: TOTAL_QUESTIONS,
+          });
+
+          console.log("Quiz session finished", { finalRankings });
+        }
       } else {
-        const allAnswersWithCurrent = [...allAnswers, ...answers];
-        const finalRankings = calculateFinalRankings(allAnswersWithCurrent);
-        setRankings(finalRankings);
-        setSessionStatus("finished");
-        setCurrentSlideIndex(13); // 結果スライドへ
-        console.log("Quiz session finished", { finalRankings });
+        // 問題スライドから次へ移動（スライドを順に進める）
+        const nextSlideIndex = currentSlideIndex + 1;
+        setCurrentSlideIndex(nextSlideIndex);
+
+        // 状態を保存してscreenに通知
+        saveQuizState({
+          currentSlideIndex: nextSlideIndex,
+          sessionStatus: "playing",
+          currentQuestion,
+        });
+
+        console.log(`Moving to slide ${nextSlideIndex}`);
       }
     } catch (error) {
       console.error("Failed to proceed to next question:", error);
       alert("次の問題への移動に失敗しました。");
     }
-  }, [currentQuestion, answers, allAnswers, calculateFinalRankings]);
-
-  const handleReset = useCallback(() => {
-    try {
-      setSessionStatus("waiting");
-      setCurrentQuestion(1);
-      setCurrentSlideIndex(0);
-      setGuestCount(0);
-      setAnswers([]);
-      setRankings([]);
-      setAllAnswers([]);
-      setShowResults(false);
-      console.log("Quiz session reset");
-    } catch (error) {
-      console.error("Failed to reset quiz session:", error);
-      alert("セッションのリセットに失敗しました。");
-    }
-  }, []);
+  }, [currentQuestion, currentSlideIndex, answers, allAnswers, calculateFinalRankings, showResults]);
 
   const handleShowResults = useCallback(() => {
     try {
-      setShowResults(true);
-      setCurrentSlideIndex((prev) => prev + 1); // 回答スライドへ
-      console.log("Showing results for question", currentQuestion);
-    } catch (error) {
-      console.error("Failed to show results:", error);
-      alert("結果の表示に失敗しました。");
-    }
-  }, [currentQuestion]);
+      // 回答スライドの場合は前のスライドへ戻る
+      if (showResults) {
+        setShowResults(false);
+        const prevSlideIndex = currentSlideIndex - 1;
+        setCurrentSlideIndex(prevSlideIndex);
 
-  const getElapsedTime = useCallback((answeredAt: number): string => {
+        // 状態を保存してscreenに通知
+        saveQuizState({
+          currentSlideIndex: prevSlideIndex,
+          sessionStatus: "playing",
+          currentQuestion,
+        });
+
+        console.log("Going back to question slide", currentQuestion);
+      } else {
+        // 問題スライドの場合は前のスライドへ
+        if (currentSlideIndex > 0) {
+          const prevSlideIndex = currentSlideIndex - 1;
+          setCurrentSlideIndex(prevSlideIndex);
+
+          // 状態を保存してscreenに通知
+          saveQuizState({
+            currentSlideIndex: prevSlideIndex,
+            sessionStatus: "playing",
+            currentQuestion,
+          });
+
+          console.log(`Going back to slide ${prevSlideIndex}`);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to go back:", error);
+      alert("前の画面への移動に失敗しました。");
+    }
+  }, [currentQuestion, currentSlideIndex, showResults]);
+
+  const _getElapsedTime = useCallback((answeredAt: number): string => {
     const elapsed = (Date.now() - answeredAt) / 1000;
     return elapsed.toFixed(1);
   }, []);
@@ -228,7 +282,7 @@ export default function ControlPanelContent() {
           <div className="flex items-center gap-4">
             {/* 参加者カウント */}
             <div className="flex items-center gap-2 rounded-full bg-white/20 px-5 py-2 backdrop-blur">
-              <svg className="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="h-5 w-5 text-white" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                 <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
               </svg>
               <span className="text-sm font-semibold text-white">参加者: {guestCount}名</span>
@@ -292,29 +346,19 @@ export default function ControlPanelContent() {
                     <button
                       type="button"
                       onClick={handleShowResults}
-                      disabled={showResults}
-                      className="flex-1 rounded-full bg-[#2196f3] px-6 py-4 text-base font-bold text-white shadow-md transition-all hover:bg-[#42a5f5] hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex-1 rounded-full bg-[#2196f3] px-6 py-4 text-base font-bold text-white shadow-md transition-all hover:bg-[#42a5f5] hover:shadow-xl active:scale-95"
                     >
-                      回答を表示
+                      前へ
                     </button>
                     <button
                       type="button"
                       onClick={handleNextQuestion}
-                      disabled={!showResults}
-                      className="flex-1 rounded-full bg-[#6750a4] px-6 py-4 text-base font-bold text-white shadow-md transition-all hover:bg-[#7f67be] hover:shadow-xl active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex-1 rounded-full bg-[#6750a4] px-6 py-4 text-base font-bold text-white shadow-md transition-all hover:bg-[#7f67be] hover:shadow-xl active:scale-95"
                     >
-                      {currentQuestion < TOTAL_QUESTIONS ? "次の問題へ" : "最終結果"}
+                      {currentQuestion < TOTAL_QUESTIONS ? "次へ" : "最終結果"}
                     </button>
                   </>
                 )}
-
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="rounded-full border-2 border-[#79747e] bg-white px-6 py-4 text-base font-bold text-[#6750a4] transition-all hover:bg-[#f5f5f5] active:scale-95"
-                >
-                  リセット
-                </button>
               </div>
             </div>
           </div>
@@ -322,7 +366,8 @@ export default function ControlPanelContent() {
           {/* 右側: ランキング */}
           <div className="overflow-hidden rounded-3xl bg-white p-5 shadow-lg">
             <h2 className="mb-4 text-base font-bold text-[#1c1b1f]">
-              正解者トップ3 <span className="text-sm font-normal text-[#79747e]">（リアルタイム）</span>
+              正解者トップ3{" "}
+              <span className="text-sm font-normal text-[#79747e]">（リアルタイム）</span>
             </h2>
             {rankings.length === 0 ? (
               <div className="flex h-[calc(100%-40px)] items-center justify-center">
@@ -357,13 +402,21 @@ export default function ControlPanelContent() {
                       <div className="mt-1 flex items-center gap-3 text-sm text-[#49454f]">
                         <span className="flex items-center gap-1">
                           <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                            <path
+                              fillRule="evenodd"
+                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                              clipRule="evenodd"
+                            />
                           </svg>
                           正解: {entry.correctCount}問
                         </span>
                         <span className="flex items-center gap-1">
                           <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                            <path
+                              fillRule="evenodd"
+                              d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z"
+                              clipRule="evenodd"
+                            />
                           </svg>
                           {entry.averageResponseTime.toFixed(1)}秒
                         </span>
