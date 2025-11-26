@@ -280,7 +280,9 @@ export default function GuestQuizContent() {
                 <br />
                 結果はスクリーンをご覧ください
                 <br />
-                素敵な時間をお過ごしください
+                この画面は閉じてください
+                <br />
+                この後も素敵なお時間をお過ごしください！
               </p>
             </div>
           </div>
