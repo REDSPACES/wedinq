@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CHOICE_LABELS, TOTAL_QUESTIONS } from "../../../lib/constants/quiz";
+import { subscribeToQuizState } from "../../../lib/utils/quiz-state";
 import type { GuestScreenState } from "../../../types/quiz";
 
 export default function GuestQuizContent() {
@@ -11,17 +12,33 @@ export default function GuestQuizContent() {
   const [selectedChoice, setSelectedChoice] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // モック：セッション状態（実際はSupabase Realtimeから取得）
+  // セッション状態（controlパネルから同期）
   const [sessionStatus, setSessionStatus] = useState<"waiting" | "playing" | "finished">("waiting");
   const [sessionCurrentQuestion, setSessionCurrentQuestion] = useState(1);
 
-  // セッション状態の変更を監視（実際はSupabase Realtimeで実装）
+  // controlパネルからの状態変更を監視
   useEffect(() => {
-    if (screenState === "waiting_for_question" && sessionStatus === "playing") {
-      setScreenState("question_display");
-      setCurrentQuestion(sessionCurrentQuestion);
-    }
-  }, [screenState, sessionStatus, sessionCurrentQuestion]);
+    const unsubscribe = subscribeToQuizState((state) => {
+      console.log("Guest Quiz received state update:", state);
+      setSessionStatus(state.sessionStatus);
+      setSessionCurrentQuestion(state.currentQuestion);
+
+      // 状態に応じて画面を切り替え
+      if (screenState === "waiting_for_question" && state.sessionStatus === "playing") {
+        setScreenState("question_display");
+        setCurrentQuestion(state.currentQuestion);
+      }
+
+      // クイズが終了したら終了画面へ
+      if (state.sessionStatus === "finished" && screenState !== "finished") {
+        setScreenState("finished");
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [screenState]);
 
   // イントロ画面から入力画面へ
   const handleStartClick = useCallback(() => {
