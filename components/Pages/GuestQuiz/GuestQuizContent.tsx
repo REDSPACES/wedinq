@@ -1,7 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { CHOICE_LABELS, TOTAL_QUESTIONS } from "../../../lib/constants/quiz";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  CHOICE_LABELS,
+  QUESTION_SLIDE_INDICES,
+  TOTAL_QUESTIONS,
+} from "../../../lib/constants/quiz";
 import { subscribeToQuizState } from "../../../lib/utils/quiz-state";
 import type { GuestScreenState } from "../../../types/quiz";
 
@@ -12,35 +16,45 @@ export default function GuestQuizContent() {
   const [selectedChoice, setSelectedChoice] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // セッション状態（controlパネルから同期）
-  const [_sessionStatus, setSessionStatus] = useState<"waiting" | "playing" | "finished">(
-    "waiting",
-  );
-  const [_sessionCurrentQuestion, setSessionCurrentQuestion] = useState(1);
+  const screenStateRef = useRef<GuestScreenState>(screenState);
+
+  useEffect(() => {
+    screenStateRef.current = screenState;
+  }, [screenState]);
 
   // controlパネルからの状態変更を監視
   useEffect(() => {
     const unsubscribe = subscribeToQuizState((state) => {
       console.log("Guest Quiz received state update:", state);
-      setSessionStatus(state.sessionStatus);
-      setSessionCurrentQuestion(state.currentQuestion);
+      const previousScreenState = screenStateRef.current;
+      const isQuestionSlideIndex = QUESTION_SLIDE_INDICES.indexOf(state.currentSlideIndex);
+      const canTransitionToQuestion =
+        previousScreenState === "waiting_for_question" ||
+        previousScreenState === "waiting_next" ||
+        previousScreenState === "question_display";
 
-      // 状態に応じて画面を切り替え
-      if (screenState === "waiting_for_question" && state.sessionStatus === "playing") {
-        setScreenState("question_display");
-        setCurrentQuestion(state.currentQuestion);
+      if (state.sessionStatus === "finished" && previousScreenState !== "finished") {
+        setScreenState("finished");
+        return;
       }
 
-      // クイズが終了したら終了画面へ
-      if (state.sessionStatus === "finished" && screenState !== "finished") {
-        setScreenState("finished");
+      if (isQuestionSlideIndex !== -1 && canTransitionToQuestion) {
+        setCurrentQuestion(isQuestionSlideIndex + 1);
+        if (previousScreenState !== "question_display") {
+          setScreenState("question_display");
+        }
+        return;
+      }
+
+      if (isQuestionSlideIndex === -1 && previousScreenState === "question_display") {
+        setScreenState("waiting_next");
       }
     });
 
     return () => {
       unsubscribe();
     };
-  }, [screenState]);
+  }, []);
 
   // イントロ画面から入力画面へ
   const handleStartClick = useCallback(() => {
@@ -66,12 +80,6 @@ export default function GuestQuizContent() {
 
       // 登録完了後、準備中画面へ
       setScreenState("waiting_for_question");
-
-      // モック：3秒後にクイズ開始（実際はRealtimeで通知を受け取る）
-      setTimeout(() => {
-        setSessionStatus("playing");
-        setSessionCurrentQuestion(1);
-      }, 3000);
     } catch (error) {
       console.error("Failed to register nickname:", error);
       alert("登録に失敗しました。もう一度お試しください。");
@@ -99,18 +107,6 @@ export default function GuestQuizContent() {
       // 回答送信後、次の問題を待つ
       setScreenState("waiting_next");
       setSelectedChoice(null);
-
-      // モック：2秒後に次の問題へ（実際はRealtimeで通知を受け取る）
-      setTimeout(() => {
-        if (currentQuestion < TOTAL_QUESTIONS) {
-          setCurrentQuestion((prev) => prev + 1);
-          setSessionCurrentQuestion((prev) => prev + 1);
-          setScreenState("question_display");
-        } else {
-          setSessionStatus("finished");
-          setScreenState("finished");
-        }
-      }, 2000);
     } catch (error) {
       console.error("Failed to submit answer:", error);
       alert("回答の送信に失敗しました。");
