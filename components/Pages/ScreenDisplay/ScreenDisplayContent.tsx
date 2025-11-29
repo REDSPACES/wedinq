@@ -2,7 +2,11 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
-import { SLIDE_FILENAMES, TIME_LIMIT_SECONDS, TIMER_INTERVAL_MS } from "../../../lib/constants/quiz";
+import {
+  SLIDE_FILENAMES,
+  TIME_LIMIT_SECONDS,
+  TIMER_INTERVAL_MS,
+} from "../../../lib/constants/quiz";
 import { getQuizState, saveQuizState, subscribeToQuizState } from "../../../lib/utils/quiz-state";
 
 // カウントダウンを表示するスライド番号（ファイル名4,6,8,10,12 = インデックス3,5,7,9,11）
@@ -62,7 +66,7 @@ export default function ScreenDisplayContent() {
       setCurrentSlideIndex(nextIndex);
       saveQuizState({ currentSlideIndex: nextIndex });
     }
-  }, [currentSlideIndex, saveQuizState]);
+  }, [currentSlideIndex]);
 
   // 前のスライドへ
   const handlePrevious = useCallback(() => {
@@ -72,14 +76,14 @@ export default function ScreenDisplayContent() {
       setCurrentSlideIndex(prevIndex);
       saveQuizState({ currentSlideIndex: prevIndex });
     }
-  }, [currentSlideIndex, saveQuizState]);
+  }, [currentSlideIndex]);
 
   // 最初に戻る
   const handleReset = useCallback(() => {
     setImageError(false);
     setCurrentSlideIndex(0);
     saveQuizState({ currentSlideIndex: 0 });
-  }, [saveQuizState]);
+  }, []);
 
   // 画像読み込みエラーハンドラー
   const handleImageError = useCallback(() => {

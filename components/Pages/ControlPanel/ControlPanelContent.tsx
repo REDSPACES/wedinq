@@ -9,8 +9,8 @@ import {
   SLIDE_FILENAMES,
   TOTAL_QUESTIONS,
 } from "../../../lib/constants/quiz";
-import type { GuestAnswer, RankingEntry, SessionStatus } from "../../../types/quiz";
 import { getQuizState, saveQuizState, subscribeToQuizState } from "../../../lib/utils/quiz-state";
+import type { GuestAnswer, RankingEntry, SessionStatus } from "../../../types/quiz";
 
 const TOTAL_SLIDES = SLIDE_FILENAMES.length;
 const RESULT_SLIDE_START_INDEX = ANSWER_SLIDE_INDICES[ANSWER_SLIDE_INDICES.length - 1] + 1;
@@ -195,7 +195,7 @@ export default function ControlPanelContent() {
         currentQuestion: nextQuestion,
       });
     },
-    [deriveStateFromSlide, saveQuizState],
+    [deriveStateFromSlide],
   );
 
   const handlePreviousSlide = useCallback(() => {

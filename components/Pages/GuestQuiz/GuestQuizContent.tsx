@@ -13,8 +13,10 @@ export default function GuestQuizContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // セッション状態（controlパネルから同期）
-  const [sessionStatus, setSessionStatus] = useState<"waiting" | "playing" | "finished">("waiting");
-  const [sessionCurrentQuestion, setSessionCurrentQuestion] = useState(1);
+  const [_sessionStatus, setSessionStatus] = useState<"waiting" | "playing" | "finished">(
+    "waiting",
+  );
+  const [_sessionCurrentQuestion, setSessionCurrentQuestion] = useState(1);
 
   // controlパネルからの状態変更を監視
   useEffect(() => {
