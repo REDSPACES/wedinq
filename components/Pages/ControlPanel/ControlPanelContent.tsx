@@ -128,37 +128,6 @@ export default function ControlPanelContent() {
     return rankingList;
   }, []);
 
-  const handleNextQuestion = useCallback(() => {
-    try {
-      setAllAnswers((prev) => [...prev, ...answers]);
-
-      if (currentQuestion < TOTAL_QUESTIONS) {
-        const nextQuestion = currentQuestion + 1;
-        setCurrentQuestion(nextQuestion);
-        setAnswers([]);
-        setRankings([]);
-        saveQuizState({
-          currentQuestion: nextQuestion,
-          sessionStatus,
-        });
-        console.log(`Moving to question ${currentQuestion + 1}`);
-      } else {
-        const allAnswersWithCurrent = [...allAnswers, ...answers];
-        const finalRankings = calculateFinalRankings(allAnswersWithCurrent);
-        setRankings(finalRankings);
-        setSessionStatus("finished");
-        saveQuizState({
-          sessionStatus: "finished",
-          currentQuestion,
-        });
-        console.log("Quiz session finished", { finalRankings });
-      }
-    } catch (error) {
-      console.error("Failed to proceed to next question:", error);
-      alert("次の問題への移動に失敗しました。");
-    }
-  }, [currentQuestion, answers, allAnswers, calculateFinalRankings, sessionStatus]);
-
   const deriveStateFromSlide = useCallback(
     (slideIndex: number): { nextStatus: SessionStatus; nextQuestion: number } => {
       if (slideIndex >= RESULT_SLIDE_START_INDEX) {
@@ -205,26 +174,6 @@ export default function ControlPanelContent() {
   const handleNextSlide = useCallback(() => {
     updateSlideState(currentSlideIndex + 1);
   }, [currentSlideIndex, updateSlideState]);
-
-  const handleShowResults = useCallback(() => {
-    try {
-      const currentRankings: RankingEntry[] = answers
-        .filter((a) => a.isCorrect)
-        .sort((a, b) => a.answeredAt - b.answeredAt)
-        .slice(0, RANKING_DISPLAY_COUNT)
-        .map((a, index) => ({
-          rank: index + 1,
-          nickname: a.nickname,
-          correctCount: currentQuestion,
-          averageResponseTime: (Date.now() - a.answeredAt) / 1000,
-        }));
-      setRankings(currentRankings);
-      console.log("Current question results:", currentRankings);
-    } catch (error) {
-      console.error("Failed to show results:", error);
-      alert("結果の表示に失敗しました。");
-    }
-  }, [answers, currentQuestion]);
 
   const getElapsedTime = useCallback((answeredAt: number): string => {
     const elapsed = (Date.now() - answeredAt) / 1000;
@@ -317,25 +266,6 @@ export default function ControlPanelContent() {
                     </button>
                   </div>
                 </div>
-
-                {sessionStatus === "playing" && (
-                  <div className="space-y-2">
-                    <button
-                      type="button"
-                      onClick={handleShowResults}
-                      className="w-full rounded-full bg-[#2196f3] px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#42a5f5] active:scale-95"
-                    >
-                      結果を表示
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleNextQuestion}
-                      className="w-full rounded-full bg-[#6750a4] px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#7f67be] hover:shadow-lg active:scale-95"
-                    >
-                      {currentQuestion < TOTAL_QUESTIONS ? "次の問題へ" : "最終結果"}
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
           </div>
