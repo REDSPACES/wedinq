@@ -262,14 +262,11 @@ export default function GuestQuizContent() {
         {/* 次の問題を待機中画面 */}
         {screenState === "waiting_next" && (
           <div className="animate-fadeIn rounded-3xl bg-white p-12 text-center shadow-2xl">
-            <div className="mb-6 flex justify-center">
-              <div className="h-16 w-16 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600" />
-            </div>
-            <h2 className="mb-2 text-2xl font-bold text-blue-900">回答を送信しました</h2>
+            <h2 className="mb-4 text-2xl font-bold text-blue-900">集計中</h2>
             <p className="text-gray-600">
-              次の問題の準備中です
+              答えは前のスクリーンで発表します！
               <br />
-              しばらくお待ちください
+              画面が切り替わるまでお待ちください
             </p>
           </div>
         )}
