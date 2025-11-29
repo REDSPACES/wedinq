@@ -42,6 +42,36 @@ export default function GuestQuizContent() {
     };
   }, [screenState]);
 
+  // 問題表示画面での32秒自動遷移タイマー
+  useEffect(() => {
+    if (screenState !== "question_display") {
+      return;
+    }
+
+    // 32秒後に自動的に「集計中」画面に遷移
+    const timeoutId = setTimeout(() => {
+      console.log("Auto-transition: 32 seconds elapsed, moving to waiting_next");
+      setScreenState("waiting_next");
+      setSelectedChoice(null);
+
+      // モック：2秒後に次の問題へ（実際はRealtimeで通知を受け取る）
+      setTimeout(() => {
+        if (currentQuestion < TOTAL_QUESTIONS) {
+          setCurrentQuestion((prev) => prev + 1);
+          setSessionCurrentQuestion((prev) => prev + 1);
+          setScreenState("question_display");
+        } else {
+          setSessionStatus("finished");
+          setScreenState("finished");
+        }
+      }, 2000);
+    }, 32000); // 32秒
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [screenState, currentQuestion]);
+
   // イントロ画面から入力画面へ
   const handleStartClick = useCallback(() => {
     setScreenState("nickname_input");
