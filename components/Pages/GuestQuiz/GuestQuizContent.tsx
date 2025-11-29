@@ -17,9 +17,36 @@ export default function GuestQuizContent() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const screenStateRef = useRef<GuestScreenState>(screenState);
+  const autoTransitionTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     screenStateRef.current = screenState;
+  }, [screenState]);
+
+  // 問題表示画面での32秒自動遷移タイマー
+  useEffect(() => {
+    // タイマーをクリア
+    if (autoTransitionTimerRef.current) {
+      clearTimeout(autoTransitionTimerRef.current);
+      autoTransitionTimerRef.current = null;
+    }
+
+    // 問題表示画面の場合、32秒後に「集計中」画面へ自動遷移
+    if (screenState === "question_display") {
+      autoTransitionTimerRef.current = setTimeout(() => {
+        console.log("Auto-transitioning to waiting_next after 32 seconds");
+        setScreenState("waiting_next");
+        setSelectedChoice(null);
+      }, 32000); // 32秒
+    }
+
+    // クリーンアップ
+    return () => {
+      if (autoTransitionTimerRef.current) {
+        clearTimeout(autoTransitionTimerRef.current);
+        autoTransitionTimerRef.current = null;
+      }
+    };
   }, [screenState]);
 
   // controlパネルからの状態変更を監視
@@ -97,6 +124,13 @@ export default function GuestQuizContent() {
 
     try {
       setIsSubmitting(true);
+
+      // 自動遷移タイマーをクリア
+      if (autoTransitionTimerRef.current) {
+        clearTimeout(autoTransitionTimerRef.current);
+        autoTransitionTimerRef.current = null;
+      }
+
       // TODO: Supabaseに回答を送信
       console.log("Submitting answer:", {
         question: currentQuestion,
