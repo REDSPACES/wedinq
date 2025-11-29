@@ -1,8 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CHOICE_LABELS, RANKING_DISPLAY_COUNT, TOTAL_QUESTIONS } from "../../../lib/constants/quiz";
+import {
+  ANSWER_SLIDE_INDICES,
+  CHOICE_LABELS,
+  QUESTION_SLIDE_INDICES,
+  RANKING_DISPLAY_COUNT,
+  SLIDE_FILENAMES,
+  TOTAL_QUESTIONS,
+} from "../../../lib/constants/quiz";
+import { getQuizState, saveQuizState, subscribeToQuizState } from "../../../lib/utils/quiz-state";
 import type { GuestAnswer, RankingEntry, SessionStatus } from "../../../types/quiz";
+
+const TOTAL_SLIDES = SLIDE_FILENAMES.length;
+const RESULT_SLIDE_START_INDEX = ANSWER_SLIDE_INDICES[ANSWER_SLIDE_INDICES.length - 1] + 1;
 
 export default function ControlPanelContent() {
   const [sessionStatus, setSessionStatus] = useState<SessionStatus>("waiting");
@@ -12,6 +23,24 @@ export default function ControlPanelContent() {
   const [answers, setAnswers] = useState<GuestAnswer[]>([]);
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
   const [allAnswers, setAllAnswers] = useState<GuestAnswer[]>([]);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+
+  useEffect(() => {
+    const initialState = getQuizState();
+    setCurrentSlideIndex(initialState.currentSlideIndex);
+    setSessionStatus(initialState.sessionStatus);
+    setCurrentQuestion(initialState.currentQuestion);
+
+    const unsubscribe = subscribeToQuizState((state) => {
+      setCurrentSlideIndex(state.currentSlideIndex);
+      setSessionStatus(state.sessionStatus);
+      setCurrentQuestion(state.currentQuestion);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   // モックデータ生成
   const mockAnswersData = useMemo(() => {
@@ -53,20 +82,6 @@ export default function ControlPanelContent() {
       setAnswerCount(Math.floor(Math.random() * 10) + 15);
     }
   }, [sessionStatus, mockAnswersData]);
-
-  const handleStart = useCallback(() => {
-    try {
-      setSessionStatus("playing");
-      setCurrentQuestion(1);
-      setAnswers([]);
-      setRankings([]);
-      setAllAnswers([]);
-      console.log("Quiz session started");
-    } catch (error) {
-      console.error("Failed to start quiz session:", error);
-      alert("クイズの開始に失敗しました。もう一度お試しください。");
-    }
-  }, []);
 
   const calculateFinalRankings = useCallback((allAnswersData: GuestAnswer[]): RankingEntry[] => {
     const guestStats = new Map<
@@ -118,38 +133,78 @@ export default function ControlPanelContent() {
       setAllAnswers((prev) => [...prev, ...answers]);
 
       if (currentQuestion < TOTAL_QUESTIONS) {
-        setCurrentQuestion((prev) => prev + 1);
+        const nextQuestion = currentQuestion + 1;
+        setCurrentQuestion(nextQuestion);
         setAnswers([]);
         setRankings([]);
+        saveQuizState({
+          currentQuestion: nextQuestion,
+          sessionStatus,
+        });
         console.log(`Moving to question ${currentQuestion + 1}`);
       } else {
         const allAnswersWithCurrent = [...allAnswers, ...answers];
         const finalRankings = calculateFinalRankings(allAnswersWithCurrent);
         setRankings(finalRankings);
         setSessionStatus("finished");
+        saveQuizState({
+          sessionStatus: "finished",
+          currentQuestion,
+        });
         console.log("Quiz session finished", { finalRankings });
       }
     } catch (error) {
       console.error("Failed to proceed to next question:", error);
       alert("次の問題への移動に失敗しました。");
     }
-  }, [currentQuestion, answers, allAnswers, calculateFinalRankings]);
+  }, [currentQuestion, answers, allAnswers, calculateFinalRankings, sessionStatus]);
 
-  const handleReset = useCallback(() => {
-    try {
-      setSessionStatus("waiting");
-      setCurrentQuestion(1);
-      setGuestCount(0);
-      setAnswerCount(0);
-      setAnswers([]);
-      setRankings([]);
-      setAllAnswers([]);
-      console.log("Quiz session reset");
-    } catch (error) {
-      console.error("Failed to reset quiz session:", error);
-      alert("セッションのリセットに失敗しました。");
-    }
-  }, []);
+  const deriveStateFromSlide = useCallback(
+    (slideIndex: number): { nextStatus: SessionStatus; nextQuestion: number } => {
+      if (slideIndex >= RESULT_SLIDE_START_INDEX) {
+        return { nextStatus: "finished", nextQuestion: TOTAL_QUESTIONS };
+      }
+
+      const questionIndex = QUESTION_SLIDE_INDICES.indexOf(slideIndex);
+      if (questionIndex !== -1) {
+        return { nextStatus: "playing", nextQuestion: questionIndex + 1 };
+      }
+
+      const answerIndex = ANSWER_SLIDE_INDICES.indexOf(slideIndex);
+      if (answerIndex !== -1) {
+        return { nextStatus: "playing", nextQuestion: answerIndex + 1 };
+      }
+
+      return { nextStatus: "waiting", nextQuestion: currentQuestion };
+    },
+    [currentQuestion],
+  );
+
+  const updateSlideState = useCallback(
+    (targetIndex: number) => {
+      if (targetIndex < 0 || targetIndex >= TOTAL_SLIDES) {
+        return;
+      }
+      const { nextStatus, nextQuestion } = deriveStateFromSlide(targetIndex);
+      setCurrentSlideIndex(targetIndex);
+      setSessionStatus(nextStatus);
+      setCurrentQuestion(nextQuestion);
+      saveQuizState({
+        currentSlideIndex: targetIndex,
+        sessionStatus: nextStatus,
+        currentQuestion: nextQuestion,
+      });
+    },
+    [deriveStateFromSlide],
+  );
+
+  const handlePreviousSlide = useCallback(() => {
+    updateSlideState(currentSlideIndex - 1);
+  }, [currentSlideIndex, updateSlideState]);
+
+  const handleNextSlide = useCallback(() => {
+    updateSlideState(currentSlideIndex + 1);
+  }, [currentSlideIndex, updateSlideState]);
 
   const handleShowResults = useCallback(() => {
     try {
@@ -221,6 +276,12 @@ export default function ControlPanelContent() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between rounded-lg bg-[#f5f5f5] p-3">
+                  <span className="text-sm text-[#49454f]">スライド</span>
+                  <span className="text-lg font-bold text-[#1c1b1f]">
+                    {currentSlideIndex + 1} / {TOTAL_SLIDES}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between rounded-lg bg-[#f5f5f5] p-3">
                   <span className="text-sm text-[#49454f]">参加者</span>
                   <span className="text-lg font-bold text-[#2196f3]">{guestCount}</span>
                 </div>
@@ -234,19 +295,31 @@ export default function ControlPanelContent() {
             {/* 操作ボタン */}
             <div className="rounded-xl bg-white p-4 shadow-sm">
               <h2 className="mb-3 text-sm font-semibold text-[#1c1b1f]">操作</h2>
-              <div className="space-y-2">
-                {sessionStatus === "waiting" && (
-                  <button
-                    type="button"
-                    onClick={handleStart}
-                    className="w-full rounded-full bg-[#6750a4] px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#7f67be] hover:shadow-lg active:scale-95"
-                  >
-                    クイズを開始
-                  </button>
-                )}
+              <div className="space-y-4">
+                <div>
+                  <p className="mb-2 text-xs font-semibold text-[#49454f]">スライド操作</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={handlePreviousSlide}
+                      disabled={currentSlideIndex === 0}
+                      className="w-full rounded-full bg-[#79747e] px-4 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#938f99] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      ← 前へ
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleNextSlide}
+                      disabled={currentSlideIndex === TOTAL_SLIDES - 1}
+                      className="w-full rounded-full bg-[#6750a4] px-4 py-3 text-sm font-semibold text-white shadow-md transition-all hover:bg-[#7f67be] active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      次へ →
+                    </button>
+                  </div>
+                </div>
 
                 {sessionStatus === "playing" && (
-                  <>
+                  <div className="space-y-2">
                     <button
                       type="button"
                       onClick={handleShowResults}
@@ -261,16 +334,8 @@ export default function ControlPanelContent() {
                     >
                       {currentQuestion < TOTAL_QUESTIONS ? "次の問題へ" : "最終結果"}
                     </button>
-                  </>
+                  </div>
                 )}
-
-                <button
-                  type="button"
-                  onClick={handleReset}
-                  className="w-full rounded-full border border-[#79747e] bg-white px-6 py-3 text-sm font-semibold text-[#6750a4] transition-all hover:bg-[#f5f5f5] active:scale-95"
-                >
-                  リセット
-                </button>
               </div>
             </div>
           </div>

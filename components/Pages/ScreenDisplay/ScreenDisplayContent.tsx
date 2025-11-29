@@ -2,27 +2,12 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useState } from "react";
-import { TIME_LIMIT_SECONDS, TIMER_INTERVAL_MS } from "../../../lib/constants/quiz";
-
-// 全スライドのファイル名（1から順番に）
-const SLIDE_FILENAMES = [
-  "1-TOP.jpg",
-  "2-qr.jpg",
-  "3-rule.jpg",
-  "4-question-1.jpg",
-  "5-answer-1.jpg",
-  "6-question-2.jpg",
-  "7-answer-2.jpg",
-  "8-question-3.jpg",
-  "9-answer-3.jpg",
-  "10-question-4.jpg",
-  "11-answer-4.jpg",
-  "12-question-5.jpg",
-  "13-answer-5.jpg",
-  "14-result.jpg",
-  "15-resultname.jpg",
-  "16-end.jpg",
-];
+import {
+  SLIDE_FILENAMES,
+  TIME_LIMIT_SECONDS,
+  TIMER_INTERVAL_MS,
+} from "../../../lib/constants/quiz";
+import { getQuizState, saveQuizState, subscribeToQuizState } from "../../../lib/utils/quiz-state";
 
 // カウントダウンを表示するスライド番号（ファイル名4,6,8,10,12 = インデックス3,5,7,9,11）
 const COUNTDOWN_SLIDE_INDICES = [3, 5, 7, 9, 11];
@@ -32,6 +17,24 @@ export default function ScreenDisplayContent() {
   const [timeLeft, setTimeLeft] = useState(TIME_LIMIT_SECONDS);
   const [imageError, setImageError] = useState(false);
   const [isCountdownActive, setIsCountdownActive] = useState(false);
+
+  // 初期状態をlocalStorageから読み込み
+  useEffect(() => {
+    const initialState = getQuizState();
+    setCurrentSlideIndex(initialState.currentSlideIndex);
+  }, []);
+
+  // controlパネルからの状態変更を監視
+  useEffect(() => {
+    const unsubscribe = subscribeToQuizState((state) => {
+      console.log("Screen received state update:", state);
+      setCurrentSlideIndex(state.currentSlideIndex);
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   // カウントダウンが必要なスライドかチェック
   useEffect(() => {
@@ -59,7 +62,9 @@ export default function ScreenDisplayContent() {
   const handleNext = useCallback(() => {
     setImageError(false);
     if (currentSlideIndex < SLIDE_FILENAMES.length - 1) {
-      setCurrentSlideIndex((prev) => prev + 1);
+      const nextIndex = currentSlideIndex + 1;
+      setCurrentSlideIndex(nextIndex);
+      saveQuizState({ currentSlideIndex: nextIndex });
     }
   }, [currentSlideIndex]);
 
@@ -67,7 +72,9 @@ export default function ScreenDisplayContent() {
   const handlePrevious = useCallback(() => {
     setImageError(false);
     if (currentSlideIndex > 0) {
-      setCurrentSlideIndex((prev) => prev - 1);
+      const prevIndex = currentSlideIndex - 1;
+      setCurrentSlideIndex(prevIndex);
+      saveQuizState({ currentSlideIndex: prevIndex });
     }
   }, [currentSlideIndex]);
 
@@ -75,6 +82,7 @@ export default function ScreenDisplayContent() {
   const handleReset = useCallback(() => {
     setImageError(false);
     setCurrentSlideIndex(0);
+    saveQuizState({ currentSlideIndex: 0 });
   }, []);
 
   // 画像読み込みエラーハンドラー
